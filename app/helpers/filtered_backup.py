@@ -28,6 +28,9 @@ device_link.DeviceLink.get_free_disk_space = _report_ample_space
 
 if __name__ == "__main__":
     verbose = ["-vvv"] if "--verbose" in sys.argv else []
-    target = [a for a in sys.argv[1:] if a != "--verbose"][0]
+    targets = [a for a in sys.argv[1:] if a != "--verbose"]
+    if not targets:
+        sys.exit("usage: filtered_backup.py [--verbose] <backup-folder>")
+    target = targets[0]
     sys.argv = ["pymobiledevice3", *verbose, "backup2", "backup", "--full", "--only-regex", KEEP, target]
     sys.exit(main())

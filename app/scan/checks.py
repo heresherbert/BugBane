@@ -438,13 +438,28 @@ def check_mvt_results(mvt_out, iocs, installed_ids):
 # --- 10. Browser history MVT can't read --------------------------------------
 
 def _manifest_file(backup_dec, domain_like, path):
-    con = sqlite3.connect(f"file:{backup_dec}/Manifest.db?mode=ro", uri=True)
-    row = con.execute("select fileID from Files where domain like ? and relativePath=? and flags=1",
-                      (domain_like, path)).fetchone()
-    con.close()
+    try:
+        con = sqlite3.connect(f"file:{backup_dec}/Manifest.db?mode=ro", uri=True)
+        try:
+            row = con.execute("select fileID from Files where domain like ? and relativePath=? and flags=1",
+                              (domain_like, path)).fetchone()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None
     if row:
         p = Path(backup_dec, row[0][:2], row[0])
         return p if p.exists() else None
+
+
+def _visit_time(ts):
+    """Format a visit timestamp: milliseconds since 1970 (Firefox for iOS), or microseconds (desktop PRTime)."""
+    if not isinstance(ts, (int, float)) or ts <= 0:
+        return ""
+    try:
+        return dt.datetime.fromtimestamp(ts / (1_000_000 if ts > 1e14 else 1000)).strftime("%Y-%m-%d %H:%M")
+    except (ValueError, OverflowError, OSError):
+        return ""
 
 
 def check_browser_history(backup_dec, iocs, installed_ids):
@@ -452,9 +467,9 @@ def check_browser_history(backup_dec, iocs, installed_ids):
         return skipped("browsers", "chk.browsers.skip")
     sources = [("Firefox", "%Firefox%", "profile.profile/places.db",
                 "select p.url, max(v.visit_date) from moz_places p left join moz_historyvisits v "
-                "on v.place_id=p.id group by p.id", 1000)]
+                "on v.place_id=p.id group by p.id")]
     items, total = [], 0
-    for browser, dom, rel, query, ts_div in sources:
+    for browser, dom, rel, query in sources:
         f = _manifest_file(backup_dec, dom, rel)
         if not f:
             continue
@@ -472,7 +487,7 @@ def check_browser_history(backup_dec, iocs, installed_ids):
             ind = iocs.match_domain(host)
             if ind and host not in seen:
                 seen.add(host)
-                when = dt.datetime.fromtimestamp(ts / ts_div).strftime("%Y-%m-%d %H:%M") if ts else ""
+                when = _visit_time(ts)
                 level, key, params = _hit(ind, "history", _vendor_installed(iocs, ind.malware, installed_ids))
                 items.append(item(level, key, params, f"{browser}: {host} ({ind.malware}) {when}".strip()))
     if not total:

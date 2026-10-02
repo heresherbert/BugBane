@@ -115,6 +115,16 @@ def test_record_stays_until_the_phone_confirms(session, keychain, monkeypatch):
     assert not recovery.has(UDID) and not keychain.items
 
 
+def test_failed_restore_is_retried_at_the_end_of_the_check(session, keychain, monkeypatch):
+    monkeypatch.setattr(pipeline, "helper", FakePhone(keychain, off_ok=False))
+    session._get_password()
+    session._restore_encryption()    # start of the analysis: the phone doesn't confirm
+    assert session._temp_password
+    monkeypatch.setattr(pipeline, "helper", FakePhone(keychain))
+    session._restore_encryption()    # end of the check tries again
+    assert not session._temp_password and not recovery.has(UDID)
+
+
 def test_restore_card_flow(session, keychain, monkeypatch):
     recovery.remember(UDID, "iPhone14,5", "pw-from-crash")
     session.phase = "ready"

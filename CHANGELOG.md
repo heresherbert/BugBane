@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.71 (2026-10-02)
+
+### Fixed
+
+- If switching backup encryption back off doesn't go through at the start of the analysis, BugBane tries
+  again when the check ends (before, it waited for the next connection to offer the restore).
+- Firefox history dates are read correctly whether stored in milliseconds or microseconds; an unreadable date
+  or backup manifest no longer stops the browser check.
+- A tool that doesn't stop when asked is now forced to quit instead of interrupting the check.
+- The support log shows the bundled pymobiledevice3 version again instead of "?".
+- Pressing Ctrl+C on `app/server.py` cleans up like quitting the app (restores the phone's settings, erases
+  temporary data).
+- Reloading the page while viewing a History entry with `--demo` stays on that entry.
+
 ## 0.70 (2026-10-02)
 
 ### Changed

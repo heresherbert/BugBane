@@ -56,9 +56,9 @@ def _version(dist):
         return None
 
 
-def _pin(root, name):
+def _pin(root, name, file=None):
     try:
-        for line in (root / "requirements" / f"{name}.txt").read_text().splitlines():
+        for line in (root / "requirements" / f"{file or name}.txt").read_text().splitlines():
             if line.startswith(f"{name}=="):
                 return line.split("==", 1)[1].strip()
     except OSError:
@@ -90,7 +90,7 @@ def build(*, root, app_version, notice_version, snapshot, log_lines, server_log,
     lines += [
         f"App: BugBane {app_version} (privacy notice {notice_version})",
         f"macOS: {platform.mac_ver()[0] or '?'} ({platform.machine()}), Mac model: {_mac_model()}",
-        f"Tools: pymobiledevice3 {_version('pymobiledevice3') or _pin(root, 'pymobiledevice3')}, "
+        f"Tools: pymobiledevice3 {_version('pymobiledevice3') or _pin(root, 'pymobiledevice3', 'pmd3')}, "
         f"MVT {_pin(root, 'mvt')}, Python {platform.python_version()}",
         f"Indicator files: {len(stix)}, newest "
         + (f"{dt.datetime.fromtimestamp(newest):%Y-%m-%d %H:%M}" if newest else "none"),

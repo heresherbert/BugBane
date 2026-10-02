@@ -160,3 +160,14 @@ def test_vendor_web_hits_are_explained_and_reported_once():
     checks.merge_vendor_web_hits([mvt, browsers])
     assert mvt["status"] == "warn" and browsers["status"] == "info"
     assert browsers["items"][0]["key"] == "hit.stalk.web.also"
+
+
+def test_visit_time_handles_milliseconds_and_microseconds():
+    ms = 1780617600000  # Firefox for iOS stores milliseconds
+    assert checks._visit_time(ms) == checks._visit_time(ms * 1000) != ""
+    assert checks._visit_time(None) == checks._visit_time(0) == checks._visit_time(10**30) == ""
+
+
+def test_browser_history_survives_an_unreadable_manifest(tmp_path):
+    (tmp_path / "Manifest.db").write_bytes(b"not a database")
+    assert checks.check_browser_history(tmp_path, IOCIndex(), set())["status"] == "skipped"

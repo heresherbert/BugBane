@@ -38,3 +38,9 @@ def test_build_keeps_steps_but_not_personal_params(tmp_path):
     assert "apps=warn" in text and "verdict: warn" in text
     for leaked in ("Anna", UDID, "SECRETTOKEN", "AnyDesk"):
         assert leaked not in text, leaked
+
+
+def test_pins_come_from_the_requirements_files():
+    root = Path(__file__).resolve().parents[1]
+    assert support._pin(root, "pymobiledevice3", "pmd3") != "?"
+    assert support._pin(root, "mvt") != "?"

@@ -176,6 +176,7 @@ def main():
     (RUN / "url.txt").write_text(url)
     os.chmod(RUN / "url.txt", 0o600)
     signal.signal(signal.SIGTERM, lambda *_: shutdown())
+    signal.signal(signal.SIGINT, lambda *_: shutdown())
     print(f"BugBane running at {url}", flush=True)
     if "--no-browser" not in sys.argv:
         webbrowser.open(url)

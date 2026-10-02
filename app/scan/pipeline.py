@@ -39,7 +39,7 @@ MVT_PY = TOOLS / "mvt/bin/python"
 HELPER = ROOT / "app/helpers/device_helper.py"
 FILTERED_BACKUP = ROOT / "app/helpers/filtered_backup.py"
 DECRYPT = ROOT / "app/helpers/partial_decrypt.py"
-APP_VERSION = "0.70"
+APP_VERSION = "0.71"
 NOTICE_VERSION = "2026-09-23"
 
 GB = 1024 ** 3
@@ -363,7 +363,11 @@ class ScanSession:
                 break
             if self._cancelled() or (timeout and time.time() - started > timeout) or (guard and guard()):
                 proc.terminate()
-                proc.wait(10)
+                try:
+                    proc.wait(10)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(5)
                 return -1, tail
             if not chunk:
                 time.sleep(0.2)
@@ -680,8 +684,8 @@ class ScanSession:
         udid = self.device["udid"]
         answer = helper("encryption", "--udid", udid, "off", "--workdir", str(self.case_dir or RUN),
                         env={"BUGBANE_PW": self._password}, timeout=300)
-        self._temp_password = False
         if answer.get("ok") and answer.get("encrypted") is False:
+            self._temp_password = False
             recovery.forget(udid)
             with self.lock:
                 if self.device:

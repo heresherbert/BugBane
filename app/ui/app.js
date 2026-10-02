@@ -11,7 +11,7 @@ const store = {
 if (params.get("t")) store.set("bugbane-token", params.get("t"));
 const TOKEN = params.get("t") || store.get("bugbane-token");
 const DEMO = params.get("demo");
-if (params.get("t")) history.replaceState(null, "", "/");
+if (params.get("t")) history.replaceState(null, "", DEMO ? `/?demo=${encodeURIComponent(DEMO)}` : "/");
 
 const ui = {
   lang: null, S: {}, local: "lang", learnIdx: 0, mode: "full",
@@ -599,8 +599,8 @@ function record(r, { live, st }) {
     <div class="row findings-h"><div></div><h2>${T("res.all")}</h2></div>
     ${r.checks.map((c) => checkRow(c)).join("")}
     <div class="foot">
-      ${["ok", "partial"].includes(v.lvl) ? `<p>${T("res.clean_b", { families: r.indicators.families.join(", ") })}</p>`
-        : `<p>${T("res.provenance", { families: r.indicators.families.join(", ") })}</p>`}
+      ${["ok", "partial"].includes(v.lvl) ? `<p>${T("res.clean_b", { families: (r.indicators?.families || []).join(", ") })}</p>`
+        : `<p>${T("res.provenance", { families: (r.indicators?.families || []).join(", ") })}</p>`}
       ${live ? `<p style="margin-top:12px"><label class="forget"><input type="checkbox" id="forget"${ui.forget ? " checked" : ""}><span>${T("res.forget")}</span></label></p>` : ""}
     </div>
   </article>`;

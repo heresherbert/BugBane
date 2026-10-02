@@ -151,7 +151,7 @@ def render_report(results, lang, version=""):
         counts[c["status"]] = counts.get(c["status"], 0) + 1
     legend = "".join(f'<span>{glyph(k, 14)}<span>{t("level." + k, lang)}</span><b>{counts[k]}</b></span>'
                      for k in ORDER if counts.get(k))
-    families = ", ".join(ind["families"])
+    families = ", ".join(ind.get("families") or [])
     limits = (t("res.clean_b", lang, {"families": families}, escape=True) if vclass in ("ok", "partial")
               else t("res.provenance", lang, {"families": families}, escape=True))
     method = t("rep.method", lang, {"version": version}).replace("  ", " ")
