@@ -1,0 +1,3 @@
+# Top-level pin for the device environment. Edit here, then: scripts/deps.py lock && scripts/deps.py vet
+# (pmd3.txt is the generated lock: every package, exact versions, SHA-256 hashes).
+pymobiledevice3==11.19.4

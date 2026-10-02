@@ -1,6 +1,6 @@
 #!/bin/bash
-# Developer setup (idempotent): Python 3.12 venvs for MVT and pymobiledevice3 in .tools/, pinned to the
-# versions the app was tested with, plus the latest spyware indicators. Users don't need this: the app
+# Developer setup (idempotent): Python 3.12 venvs for MVT and pymobiledevice3 in .tools/, installed exactly
+# from the hashed locks in requirements/ (wheels only), plus the latest spyware indicators. Users don't need this: the app
 # bundle (scripts/build_app.sh, ./install.sh) carries its own Python.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -27,12 +27,17 @@ fi
 
 mkdir -p .tools run evidence
 for env in mvt pmd3; do
-  if [ ! -x ".tools/$env/bin/python" ]; then
+  LOCK_SUM=$(shasum -a 256 "requirements/$env.txt" | cut -d' ' -f1)
+  if [ "$(cat ".tools/$env/.lock-sha256" 2>/dev/null)" != "$LOCK_SUM" ]; then
+    # a fresh environment, so nothing outside the lock lingers from an earlier install
     echo "Creating .tools/$env…"
+    rm -rf ".tools/$env"
     "$PY" -m venv ".tools/$env"
+    ".tools/$env/bin/pip" install -q --disable-pip-version-check --require-hashes --only-binary :all: \
+      --no-binary hexdump -r "requirements/$env.txt"
+    find ".tools/$env/lib" -path '*/site-packages/*.pth' -delete  # as in the app bundle: no start-up hooks
+    echo "$LOCK_SUM" > ".tools/$env/.lock-sha256"
   fi
-  ".tools/$env/bin/pip" install -q --upgrade pip
-  ".tools/$env/bin/pip" install -q -r "requirements/$env.txt"
 done
 
 echo "Downloading the latest spyware indicators…"

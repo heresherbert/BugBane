@@ -1,6 +1,7 @@
 #!/bin/bash
-# Builds a self-contained BugBane.app: an embedded Python (requirements/runtime.conf, checksum-verified),
-# the pymobiledevice3 and MVT packages, the app code, a launcher and the icon. Running it needs no
+# Builds a self-contained BugBane.app: an embedded Python (requirements/runtime.conf, checksum- and
+# attestation-verified), the pymobiledevice3 and MVT packages (installed only from the hashed locks in
+# requirements/, see docs/SUPPLY-CHAIN.md), the app code, a launcher and the icon. Running it needs no
 # Homebrew, no setup.sh and no Terminal. Data goes to ~/Library/Application Support/Bugbane
 # (app/scan/paths.py); the bundle itself is never written to. Ad-hoc signed for local use; Developer ID
 # signing and notarization are a separate step.
@@ -41,6 +42,16 @@ if ! echo "$SHA  $CACHE/$FILE" | shasum -a 256 -c --status 2>/dev/null; then
   fi
   mv "$CACHE/$FILE.part" "$CACHE/$FILE"
 fi
+# the build's GitHub attestation proves it came from python-build-standalone's own release workflow
+if command -v gh >/dev/null; then
+  gh attestation verify "$CACHE/$FILE" --repo astral-sh/python-build-standalone >/dev/null \
+    || { echo "No valid attestation for $FILE: refusing to build." >&2; exit 1; }
+  echo "Embedded Python: checksum and attestation verified"
+elif [ -z "${BUGBANE_SKIP_ATTESTATION:-}" ]; then
+  echo "The GitHub CLI (gh) is needed to verify the embedded Python's attestation." >&2
+  echo "Install it, or set BUGBANE_SKIP_ATTESTATION=1 to rely on the pinned checksum alone." >&2
+  exit 1
+fi
 
 APP="$OUT/BugBane.app"
 RES="$APP/Contents/Resources"
@@ -52,11 +63,15 @@ PY="$RT/python/bin/python3"
 export PYTHONNOUSERSITE=1
 
 # --- 2. the two tool environments (kept apart, as in the checkout: their pins move independently) ------
+# Only what the lock names, at its exact version and SHA-256, from wheels (no package code runs at install
+# time; the one reviewed source-only package is listed in requirements/vetting.toml).
 for env in pmd3 mvt; do
   echo "Installing $env…"
-  "$PY" -m pip install -q --disable-pip-version-check --no-compile --target "$RT/$env/site" \
-    -r "$ROOT/requirements/$env.txt"
+  "$PY" -m pip install -q --disable-pip-version-check --no-compile --require-hashes --only-binary :all: \
+    --no-binary hexdump --target "$RT/$env/site" -r "$ROOT/requirements/$env.txt"
   rm -rf "$RT/$env/site/bin"               # pip's scripts point at this build folder; we write our own
+  # .pth files would run code at interpreter start; packages load via PYTHONPATH, which never reads them
+  find "$RT/$env/site" -maxdepth 1 -name '*.pth' -print -delete | sed 's/^/  removed /'
 done
 # pip isn't needed at runtime; tkinter/IDLE aren't used
 rm -rf "$RT"/python/lib/python3.*/site-packages/pip "$RT"/python/lib/python3.*/site-packages/pip-*.dist-info \

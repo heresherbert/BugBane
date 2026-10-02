@@ -3,29 +3,62 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: "17 5 * * *"  # daily: the public indicator lists change without any commit here
+    - cron: "17 5 * * *"  # daily: the public indicator lists and advisories change without any commit here
   workflow_dispatch:
 permissions:
   contents: read
+# Actions are pinned to full commit SHAs (a tag can be moved; a commit can't). Dependabot keeps them current.
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
       - name: Unit tests (no iPhone needed)
         run: |
-          pip install -r requirements/dev.txt
+          pip install --require-hashes --only-binary :all: -r requirements/dev.txt
           pytest -q
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: "20"
       - name: UI syntax check
         run: node --check app/ui/app.js
       - name: Shell syntax check
         run: bash -n setup.sh install.sh scripts/build_app.sh scripts/app_icon.sh
+
+  dependencies:
+    name: Dependency integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install the dev tools from their lock
+        run: |
+          pip install --require-hashes --only-binary :all: -r requirements/dev.txt
+      - name: Locks match their inputs
+        run: python scripts/deps.py check
+      - name: Vet the locked packages
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # pull requests and pushes: vet what changed; daily and manual runs: audit everything
+          case "$EVENT" in
+            pull_request) python scripts/deps.py vet --base "$PR_BASE" ;;
+            push) if git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then python scripts/deps.py vet --base "$BEFORE";
+                  else python scripts/deps.py vet --all; fi ;;
+            *) python scripts/deps.py vet --all ;;
+          esac
 
   detection-replay:
     name: Detection replay (every public indicator)
@@ -36,12 +69,16 @@ jobs:
       # a failed download must fail the run, not skip the live sweep
       BUGBANE_REQUIRE_LIVE_FEEDS: "1"
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
-      - name: Install test tools and the pinned MVT
-        run: pip install -r requirements/dev.txt -r requirements/mvt.txt
+      - name: Install test tools and the pinned MVT from their locks
+        run: |
+          pip install --require-hashes --only-binary :all: -r requirements/dev.txt
+          pip install --require-hashes --only-binary :all: --no-binary hexdump -r requirements/mvt.txt
       - name: Download the public indicator lists
         run: |
           mvt --disable-update-check download-iocs

@@ -3,11 +3,12 @@
 BugBane is licensed under **GPL-3.0-or-later** (see [LICENSE](LICENSE)). The repository does not
 vendor third-party code; it does carry subsets of three open-licensed fonts (next-but-one section). For development, `setup.sh` installs the packages below into local virtual
 environments (`.tools/`). The app bundle (`scripts/build_app.sh`) **redistributes** them, together with
-an embedded Python (next section), all pinned in `requirements/`.
+an embedded Python (next section), all pinned with hashes in `requirements/` (see
+[docs/SUPPLY-CHAIN.md](docs/SUPPLY-CHAIN.md)).
 
 | Component | Used for | How it's used | License |
 |---|---|---|---|
-| [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) 11.17.0 | USB pairing, backup, crash reports, sysdiagnose | imported in-process by `app/helpers/device_helper.py` and `app/helpers/filtered_backup.py` | GPL-3.0 |
+| [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) 11.19.4 | USB pairing, backup, crash reports, sysdiagnose | imported in-process by `app/helpers/device_helper.py` and `app/helpers/filtered_backup.py` | GPL-3.0 |
 | [Mobile Verification Toolkit (MVT)](https://github.com/mvt-project/mvt) 2026.9.28 | backup analysis, indicator download | run as a **separate program** (`mvt`, `mvt-ios`) | MVT License 1.1 (MPL-2.0-based, adds a consent requirement) |
 | [iphone_backup_decrypt](https://github.com/jsharkey13/iphone_backup_decrypt) 0.10.0 (installed with MVT) | decrypting backup files | imported by `app/helpers/partial_decrypt.py` | MIT |
 

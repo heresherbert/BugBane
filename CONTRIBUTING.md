@@ -19,10 +19,17 @@ Thanks for helping make iPhone spyware checks accessible to everyone.
 
 ```bash
 ./setup.sh                           # Python 3.12 venvs in .tools/, pinned deps, indicators
-python3.12 -m venv .venv && .venv/bin/pip install -r requirements/dev.txt
+python3.12 -m venv .venv && .venv/bin/pip install --require-hashes --only-binary :all: -r requirements/dev.txt
 .venv/bin/pytest                     # unit tests: no iPhone needed
 .tools/pmd3/bin/python app/server.py # run the app from the checkout
 ```
+
+## Dependencies
+
+Packages are installed only from the hashed locks in `requirements/*.txt`, which are generated from the
+`.in` files. To change a dependency, edit the `.in` file, then run `scripts/deps.py lock` and
+`scripts/deps.py vet`; a PR that changes a lock must pass the vetting gate. Details:
+[docs/SUPPLY-CHAIN.md](docs/SUPPLY-CHAIN.md).
 
 ## Translations
 
@@ -37,7 +44,7 @@ python3.12 -m venv .venv && .venv/bin/pip install -r requirements/dev.txt
 ## Pull requests
 
 - Keep PRs focused; describe how you tested (unit tests, and the devices and iOS versions if relevant).
-- CI must pass: `pytest`, translation parity, and a JS syntax check.
+- CI must pass: `pytest`, translation parity, a JS syntax check and the dependency integrity job.
 - By contributing you agree that your contribution is licensed under GPL-3.0-or-later.
 
 ## Code of conduct

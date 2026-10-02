@@ -39,7 +39,7 @@ MVT_PY = TOOLS / "mvt/bin/python"
 HELPER = ROOT / "app/helpers/device_helper.py"
 FILTERED_BACKUP = ROOT / "app/helpers/filtered_backup.py"
 DECRYPT = ROOT / "app/helpers/partial_decrypt.py"
-APP_VERSION = "0.71"
+APP_VERSION = "0.72"
 NOTICE_VERSION = "2026-09-23"
 
 GB = 1024 ** 3

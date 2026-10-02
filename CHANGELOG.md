@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.72 (2026-10-02)
+
+### Security
+
+- **Locked dependencies.** Every package in the app (pymobiledevice3, MVT and everything they pull in) is
+  pinned to an exact version and the SHA-256 of each file, for all platforms, and installed from wheels only:
+  no package code runs during installation. Before, only the two top-level packages were pinned.
+- **Vetting gate for updates** (`scripts/deps.py vet`): a 7-day cooldown on new releases, known-vulnerability
+  checks (OSV), publisher provenance, wheel integrity and a code diff against the previous version. CI runs it
+  on every change and audits every locked package daily. See [docs/SUPPLY-CHAIN.md](docs/SUPPLY-CHAIN.md).
+- The embedded Python's GitHub attestation is verified at build time, in addition to its pinned checksum.
+- CI actions are pinned to commit SHAs and check out without credentials.
+- The app bundle carries no `.pth` start-up hooks.
+
+### Changed
+
+- With the cooldown, a few dependencies sit one release back from the newest (for example cryptography
+  50.0.1, fastapi 0.141.1, uvicorn 0.53.0) until their latest releases have been public for a week.
+
 ## 0.71 (2026-10-02)
 
 ### Fixed

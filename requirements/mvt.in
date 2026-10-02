@@ -1,0 +1,2 @@
+# Top-level pin for the MVT environment. Edit here, then: scripts/deps.py lock && scripts/deps.py vet
+mvt==2026.9.28

@@ -32,8 +32,11 @@ result in plain English or Hungarian.
   [Mobile Verification Toolkit](https://github.com/mvt-project/mvt), developed by Amnesty
   International's Security Lab, and [pymobiledevice3](https://github.com/doronz88/pymobiledevice3).
   Neither project endorses BugBane.
+- **Locked, verified dependencies.** Every package the app installs is pinned to an exact version and
+  file hash, installed from wheels only, and vetted before any update: a week-long cooldown, known
+  vulnerabilities, publisher provenance and a code diff. See [docs/SUPPLY-CHAIN.md](docs/SUPPLY-CHAIN.md).
 
-> **Status: pre-1.0 (0.71).** Full checks have run end to end in the installed app on an iPhone 13
+> **Status: pre-1.0 (0.72).** Full checks have run end to end in the installed app on an iPhone 13
 > (iOS 27.0, encrypted backups) and an iPhone XS (iOS 18.7, unencrypted backups), and every capture step
 > was exercised on real devices (iOS 18, 26.5 and 27.0). The app isn't signed or notarized yet. See
 > [CHANGELOG.md](CHANGELOG.md).

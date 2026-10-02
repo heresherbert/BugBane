@@ -58,7 +58,7 @@ def _version(dist):
 
 def _pin(root, name, file=None):
     try:
-        for line in (root / "requirements" / f"{file or name}.txt").read_text().splitlines():
+        for line in (root / "requirements" / f"{file or name}.in").read_text().splitlines():
             if line.startswith(f"{name}=="):
                 return line.split("==", 1)[1].strip()
     except OSError:

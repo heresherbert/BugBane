@@ -1,0 +1,33 @@
+# Policy for scripts/deps.py vet. Every change here is itself reviewed like code.
+
+# A release must be public this long before BugBane installs it. Compromised releases are usually caught and
+# pulled within days; waiting a week keeps them out.
+cooldown_days = 7
+
+# Packages with no wheel, whose setup code runs at install time. Each entry is one reviewed file; a new
+# version or file fails vet until it is reviewed again and this entry updated.
+[source_only.hexdump]
+version = "3.3"
+sha256 = "d781a43b0c16ace3f9366aade73e8ad3a7bd5137d58f0b45ab2d3f54876f20db"
+reviewed = "2026-10-02: one pure-Python module (binascii, sys); plain distutils setup.py"
+
+# Advisories reviewed and found not to affect BugBane, e.g.
+# [[accepted_advisory]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# reason = "..."
+
+# Releases allowed inside the cooldown (e.g. an urgent security fix), each after reading its diff.
+[[expedite]]
+package = "pymobiledevice3"
+version = "11.19.4"
+reason = "shipped in 0.70 before the cooldown; diff from 11.17.0 reviewed, verified on a real iPhone"
+
+[[expedite]]
+package = "mvt"
+version = "2026.9.28"
+reason = "shipped in 0.69 before the cooldown; diff from 2026.9.21 reviewed"
+
+[[expedite]]
+package = "fonttools"
+version = "4.66.1"
+reason = "dev only (brand assets); security fix for GHSA-768j-98cg-p3fv; diff from 4.60.1 reviewed"

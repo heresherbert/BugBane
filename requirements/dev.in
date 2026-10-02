@@ -1,0 +1,7 @@
+# Development and CI tools. Edit here, then: scripts/deps.py lock && scripts/deps.py vet
+pytest==9.1.1
+# scripts/deps.py lock (resolves and hashes the locks for every platform)
+uv==0.12.19
+# scripts/brand_assets.py (logo outlines and font subsets); not needed to run or test the app
+fonttools[woff]==4.66.1
+uharfbuzz==0.56.2
