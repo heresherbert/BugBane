@@ -1,0 +1,33 @@
+# Phone data and local state: must never be committed
+evidence/
+history/
+run/
+*.tar.gz
+*.ips
+backup*/
+
+# Tooling (created by setup.sh) and build output (scripts/build_app.sh)
+.tools/
+.venv/
+*.app/
+build/
+.cache/
+
+# Python / OS noise
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# Maintainers' local notes and assistant instruction files (not part of the project)
+internal/
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# Local editor and environment files
+.vscode/
+.idea/
+*.swp
+.env
+.env.*

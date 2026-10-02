@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/heresherbert/BugBane/security/advisories/new
+    about: Please report vulnerabilities privately.
+  - name: I think my phone is compromised
+    url: https://www.accessnow.org/help/
+    about: Free, confidential help from the Access Now Digital Security Helpline.

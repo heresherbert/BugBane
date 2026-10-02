@@ -1,0 +1,33 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste reports, logs, app lists, device names or anything else from a real phone.**
+        If you think your own phone is compromised, contact the Access Now Digital Security Helpline:
+        https://www.accessnow.org/help/ — this tracker can't give individual help.
+        Security vulnerabilities: use private reporting (see SECURITY.md), not an issue.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This report contains no data from a real phone (or it is fully redacted).
+          required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: BugBane version or commit, macOS version, iPhone model and iOS version

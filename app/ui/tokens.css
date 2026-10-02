@@ -1,0 +1,39 @@
+/* BugBane brand tokens. The one source for colour, space and radius: the app links this
+   file and the report inlines it. Every neutral leans slightly toward plum. Contrast notes are on Graphite
+   unless stated; all text pairs pass WCAG AA. */
+:root {
+  /* Dark ground */
+  --c-night: #141317;          /* cover, app icon */
+  --c-graphite: #1c1b1f;       /* the dark ground */
+  --c-sheet: #252428;          /* raised surfaces */
+  --c-fill: #2e2d32;           /* wells, tracks, hover */
+  --c-rule: #38363c;           /* hairlines */
+  --c-rule-strong: #4a484f;    /* secondary button border */
+  --c-control: #75727b;        /* text-field border, 3.2:1 on Sheet */
+  --c-mist: #a9a7ae;           /* secondary text, 7.2:1 */
+  --c-mist-2: #908e96;         /* tertiary text, 4.8:1 on Sheet; never essential copy */
+  --c-ink-light: #ecebee;      /* text and the mark on dark, 14.4:1 */
+
+  /* Light ground */
+  --c-paper: #f6f5f7;          /* the light ground */
+  --c-white: #ffffff;          /* raised surfaces, print */
+  --c-rule-light: #dcdadf;     /* hairlines */
+  --c-control-light: #8e8b94;  /* control borders, 3.1:1 on Paper */
+  --c-stone: #5e5c64;          /* secondary text, 6.1:1 on Paper */
+  --c-ink: #1a191d;            /* text and the mark on light, 16.1:1 on Paper */
+
+  /* Accent: Actaea. One plum thing per view */
+  --c-actaea: #d7a9d3;         /* on dark grounds, 8.6:1 */
+  --c-actaea-deep: #7b3f78;    /* on light grounds, 6.8:1 on Paper */
+
+  /* Signal colours: findings only, never marketing. Each level also has its own shape */
+  --c-alert: #f2796c;  --c-warn: #e0b15a;  --c-info: #97b6e4;                 /* on dark */
+  --c-alert-deep: #b3261e;  --c-warn-deep: #8a5a00;  --c-info-deep: #2f5596;  /* on light */
+
+  /* Space: a 4 px base */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px;
+  --space-6: 32px; --space-7: 48px; --space-8: 64px; --space-9: 96px;
+
+  /* Radius */
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+}

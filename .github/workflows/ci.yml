@@ -1,0 +1,53 @@
+name: CI
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 5 * * *"  # daily: the public indicator lists change without any commit here
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Unit tests (no iPhone needed)
+        run: |
+          pip install -r requirements/dev.txt
+          pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: UI syntax check
+        run: node --check app/ui/app.js
+      - name: Shell syntax check
+        run: bash -n setup.sh install.sh scripts/build_app.sh scripts/app_icon.sh
+
+  detection-replay:
+    name: Detection replay (every public indicator)
+    runs-on: ubuntu-latest
+    env:
+      # one folder for `mvt download-iocs` and for the checks (see scan/iocs.py: mvt_data_folder)
+      MVT_DATA_FOLDER: ${{ github.workspace }}/.ci-mvt-data
+      # a failed download must fail the run, not skip the live sweep
+      BUGBANE_REQUIRE_LIVE_FEEDS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test tools and the pinned MVT
+        run: pip install -r requirements/dev.txt -r requirements/mvt.txt
+      - name: Download the public indicator lists
+        run: |
+          mvt --disable-update-check download-iocs
+          ls "$MVT_DATA_FOLDER/indicators" | wc -l
+      - name: Replay every indicator through the checks
+        run: pytest -q -rs tests/test_replay.py
+      - name: Detection table
+        if: always()
+        run: python scripts/detection_report.py --markdown >> "$GITHUB_STEP_SUMMARY"

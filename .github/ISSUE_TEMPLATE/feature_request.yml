@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest a check, a language, or an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed solution
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: For new detections, link the public research or indicators (never real victims' data)

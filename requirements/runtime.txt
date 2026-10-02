@@ -1,0 +1,7 @@
+# Embedded Python for BugBane.app: python-build-standalone (astral-sh, MIT/PSF), a relocatable CPython.
+# scripts/build_app.sh downloads the build for the target architecture and refuses it unless the
+# SHA-256 matches. To update: pick a release, copy the two lines from its SHA256SUMS file.
+release 20260929
+python 3.12.14
+aarch64-apple-darwin de6b8f94fa765639b423ea353ab340669704c7186f96ee3cab389dcfde770c3c
+x86_64-apple-darwin f51ec8a7fa0ede129a5e2e942a2a453ba4830adaca2289da4449390e42443292
