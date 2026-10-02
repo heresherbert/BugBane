@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.70 (2026-10-02)
+
+### Changed
+
+- pymobiledevice3 11.19.4 (from 11.17.0), verified with a full check on a real iPhone (iOS 27, encrypted
+  backups): pairing, diagnostic snapshot, backup password, passcode prompt, backup and analysis.
+
 ## 0.69 (2026-10-02)
 
 ### Added

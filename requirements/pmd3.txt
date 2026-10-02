@@ -1,1 +1,1 @@
-pymobiledevice3==11.17.0
+pymobiledevice3==11.19.4
