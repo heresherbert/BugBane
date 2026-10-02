@@ -54,3 +54,18 @@ def test_foreign_host_rejected(port):
 def test_no_path_traversal(port):
     assert request(port, "GET", "/ui/../server.py")[0] == 404
     assert request(port, "GET", "/i18n/../../server.json")[0] in (401, 404)
+
+
+def test_dropped_connections_leave_no_traceback(capsys):
+    srv = server.LocalServer.__new__(server.LocalServer)  # handle_error needs no socket
+    for exc in (BrokenPipeError(32, "Broken pipe"), ConnectionResetError(54, "reset")):
+        try:
+            raise exc
+        except OSError:
+            srv.handle_error(None, ("127.0.0.1", 1))
+    assert capsys.readouterr().err == ""
+    try:
+        raise ValueError("real bug")
+    except ValueError:
+        srv.handle_error(None, ("127.0.0.1", 1))
+    assert "ValueError: real bug" in capsys.readouterr().err

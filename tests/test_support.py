@@ -40,7 +40,12 @@ def test_build_keeps_steps_but_not_personal_params(tmp_path):
         assert leaked not in text, leaked
 
 
-def test_pins_come_from_the_requirements_files():
-    root = Path(__file__).resolve().parents[1]
-    assert support._pin(root, "pymobiledevice3", "pmd3") != "?"
-    assert support._pin(root, "mvt") != "?"
+def test_tool_versions_come_from_the_installed_environments(tmp_path):
+    # the app bundle has runtime/<env>/site and no requirements/ folder; a checkout has .tools/<env> venvs
+    for layout, site in (("bundle", "runtime/mvt/site"), ("checkout", ".tools/mvt/lib/python3.12/site-packages")):
+        root = tmp_path / layout
+        info = root / site / "mvt-2026.9.28.dist-info"
+        info.mkdir(parents=True)
+        (info / "METADATA").write_text("Metadata-Version: 2.1\nName: mvt\nVersion: 2026.9.28\n")
+        assert support._installed(root, "mvt", "mvt") == "2026.9.28", layout
+        assert support._installed(root, "pmd3", "pymobiledevice3") == "?"

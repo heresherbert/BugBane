@@ -12,6 +12,8 @@ import subprocess
 from importlib import metadata
 from pathlib import Path
 
+from .paths import tools_folder
+
 HEADER = """BugBane support log
 Generated: {now} (local time)
 
@@ -49,21 +51,13 @@ def _numeric(params):
     return " ".join(out)
 
 
-def _version(dist):
-    try:
-        return metadata.version(dist)
-    except metadata.PackageNotFoundError:
-        return None
-
-
-def _pin(root, name, file=None):
-    try:
-        for line in (root / "requirements" / f"{file or name}.in").read_text().splitlines():
-            if line.startswith(f"{name}=="):
-                return line.split("==", 1)[1].strip()
-    except OSError:
-        pass
-    return "?"
+def _installed(root, env, dist):
+    """The version of dist installed in a tool environment: runtime/<env>/site in the app bundle,
+    .tools/<env>/lib/python3.*/site-packages in a checkout."""
+    base = tools_folder(root) / env
+    sites = [base / "site", *sorted(base.glob("lib/python3*/site-packages"))]
+    found = list(metadata.distributions(name=dist, path=[str(p) for p in sites if p.is_dir()]))
+    return found[0].version if found else "?"
 
 
 def _mac_model():
@@ -90,8 +84,8 @@ def build(*, root, app_version, notice_version, snapshot, log_lines, server_log,
     lines += [
         f"App: BugBane {app_version} (privacy notice {notice_version})",
         f"macOS: {platform.mac_ver()[0] or '?'} ({platform.machine()}), Mac model: {_mac_model()}",
-        f"Tools: pymobiledevice3 {_version('pymobiledevice3') or _pin(root, 'pymobiledevice3', 'pmd3')}, "
-        f"MVT {_pin(root, 'mvt')}, Python {platform.python_version()}",
+        f"Tools: pymobiledevice3 {_installed(root, 'pmd3', 'pymobiledevice3')}, "
+        f"MVT {_installed(root, 'mvt', 'mvt')}, Python {platform.python_version()}",
         f"Indicator files: {len(stix)}, newest "
         + (f"{dt.datetime.fromtimestamp(newest):%Y-%m-%d %H:%M}" if newest else "none"),
         f"Free space on this Mac: {free_gb:.1f} GB",

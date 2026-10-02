@@ -148,6 +148,13 @@ class LocalServer(ThreadingHTTPServer):
         socketserver.TCPServer.server_bind(self)
         self.server_name, self.server_port = "127.0.0.1", self.server_address[1]
 
+    def handle_error(self, request, client_address):
+        # A tab that closes or reloads mid-poll drops its connection before the reply is written; that is
+        # normal, not an error worth a traceback in the log.
+        if isinstance(sys.exc_info()[1], ConnectionError):
+            return
+        super().handle_error(request, client_address)
+
 
 def shutdown():
     SESSION.shutdown()  # restores backup encryption if we changed it, erases unkept data

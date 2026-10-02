@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.73 (2026-10-02)
+
+### Fixed
+
+- The support log shows the installed MVT version again instead of "?" (both tool versions are now read from
+  the installed packages).
+- The server log no longer fills with `BrokenPipeError` tracebacks when a browser tab closes or reloads while
+  the page is polling for progress.
+
 ## 0.72 (2026-10-02)
 
 ### Security
