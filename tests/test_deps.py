@@ -109,3 +109,22 @@ def test_snapshot_covers_the_locks_without_windows_only_packages(capsys, monkeyp
     assert any(p.startswith("pkg:pypi/ioregistry@") for p in pmd3)  # macOS-only: installed in the app
     assert all(r["scope"] == "development" for r in snap["manifests"]["requirements/dev.txt"]["resolved"].values())
     assert deps._installed_somewhere("sys_platform == 'win32'") is False
+
+
+def test_sbom_lists_exactly_what_the_mac_app_installs(capsys):
+    deps.cmd_sbom(type("A", (), {"version": "9.9"})())
+    sbom = __import__("json").loads(capsys.readouterr().out)
+    assert sbom["bomFormat"] == "CycloneDX" and sbom["metadata"]["component"]["version"] == "9.9"
+    libs = {c["name"] for c in sbom["components"] if c["type"] == "library"}
+    want = {n for env in ("pmd3", "mvt")
+            for n, e in deps.parse_lock((ROOT / f"requirements/{env}.txt").read_text()).items()
+            if deps._installed_on(e["marker"], "darwin")}
+    assert libs == want and "ioregistry" in libs and not {"av", "lzfse", "pywin32"} & libs
+    assert all(c["hashes"] for c in sbom["components"])
+    assert sum(c["name"] == "cpython" for c in sbom["components"]) == 2
+
+
+def test_build_is_set_up_to_be_reproducible():
+    build = (ROOT / "scripts/build_app.sh").read_text()
+    assert "UNCHECKED_HASH" in build and "PYTHONHASHSEED=0" in build and "-n 1" in build
+    assert "compileall" not in build  # one process compiles many files: output varies between builds

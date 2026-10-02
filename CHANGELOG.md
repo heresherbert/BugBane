@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.75 (2026-10-03)
+
+### Security
+
+- **Verified threat-list downloads.** BugBane downloads the public indicator lists itself instead of through
+  `mvt download-iocs`, and only replaces a list that comes from an allowed source, is a valid STIX2 bundle within
+  its size limit, and hasn't suddenly lost more than half of its indicators; otherwise the current copy is kept.
+  A manifest records each list's SHA-256, indicator count and download time.
+- **Reproducible build.** Two builds of the same commit produce byte-identical apps. Each release carries a
+  CycloneDX SBOM and the SHA-256 of every file in the app.
+- **Cryptographically verified provenance.** The dependency gate verifies PyPI attestations with Sigstore (the
+  signature, the transparency log, the exact file and the publisher's identity) for every locked package that
+  has them, instead of trusting PyPI's summary.
+
+See [docs/SUPPLY-CHAIN.md](docs/SUPPLY-CHAIN.md).
+
 ## 0.74 (2026-10-03)
 
 ### Security

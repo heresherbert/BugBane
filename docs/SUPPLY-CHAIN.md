@@ -42,8 +42,12 @@ version and, for every package that changed or is new:
 - **Hashes.** Every hash in the lock must be a file PyPI lists for that exact version; nothing yanked.
 - **Known vulnerabilities.** Every locked package (not only the changed ones) is checked against
   [OSV](https://osv.dev), which includes the GitHub and PyPA advisory databases.
-- **Provenance.** PyPI attestations (Trusted Publishing) are compared with the previous version. A package
-  that loses its attestation, or is suddenly published from a different repository, fails.
+- **Provenance.** PyPI attestations (PEP 740, Trusted Publishing) are verified cryptographically with
+  [pypi-attestations](https://github.com/pypi/pypi-attestations) and Sigstore: the signature, its transparency-log
+  entry, that it covers exactly the locked file's SHA-256, and that the signing identity is the publisher PyPI
+  recorded (for example a GitHub repository and workflow). An attestation that doesn't verify fails, for every
+  locked package, daily. For a changed package the verified publisher is compared with the previous version's: a
+  package that loses its attestation, or is suddenly published from a different repository, fails.
 - **Wheel integrity.** Each wheel is downloaded, hash-checked, and every file checked against the wheel's own
   `RECORD`; a changed or smuggled file fails.
 - **Code review signals.** The new wheel is compared with the previous one, and increases in risky patterns
@@ -61,6 +65,47 @@ CI runs `deps.py check` and `deps.py vet` on every push and pull request, and au
 so an advisory published for a version we already ship fails the next daily run.
 On every push to `main`, CI also submits the locks to GitHub's dependency graph (`deps.py snapshot`), so
 GitHub's security alerts cover the exact installed versions.
+
+## Threat data
+
+The indicator lists are data, not code, but an attacker who could empty or swap them could hide spyware from the
+check. `app/helpers/fetch_indicators.py` downloads them (when the app opens if they are more than a day old, and
+before each check) and only replaces a list when:
+
+- the index comes from MVT's indicator repository and the list from one of the allowed GitHub repositories
+  (`mvt-project/mvt-indicators`, `AmnestyTech/investigations`, `AssoEchap/stalkerware-indicators`); a new source is
+  refused until it has been reviewed;
+- TLS verifies and the download stays within its size limit;
+- it is a STIX2 bundle with at least one indicator;
+- it hasn't lost more than half of its indicators compared with the current copy (a shrinking list is refused
+  and the current copy kept).
+
+New copies are written completely before they replace the old ones. `bugbane-indicators.json`, next to the
+lists, records each list's SHA-256, indicator count and download time. CI runs the same downloader daily in
+strict mode, so a refused, shrunken or failed list shows up the same day.
+
+## Reproducible build and SBOM
+
+Two builds of the same commit produce byte-identical apps: every file, including the code signature.
+`scripts/repro_check.sh` builds twice in different folders and compares the SHA-256 of every file; a release is
+only published if it passes. What makes it work:
+
+- every package and the embedded Python come from hashed locks;
+- bytecode is compiled as hash-based `.pyc` files (no timestamps), with a fixed hash seed, one file per process
+  (marshal output otherwise depends on what else the process compiled), and paths relative to the bundle;
+- pip's generated `bin/` scripts, which contain the build folder's path, are removed along with their `RECORD`
+  entries.
+
+The pip that installs the packages is the one inside the verified embedded Python; it is removed from the app
+afterwards.
+
+Each GitHub release carries two files:
+
+- `BugBane-<version>.cdx.json`: a CycloneDX SBOM of the app, with every package, its version and accepted hashes,
+  and the embedded Python;
+- `BugBane-<version>-<arch>.sha256`: the SHA-256 of every file in the app as built for the release. Building the
+  same tag on a Mac of the same architecture should give the same list (`scripts/repro_check.sh --manifest FILE`,
+  then compare); identical results across different macOS and tool versions are not verified yet.
 
 ## Updating a dependency
 

@@ -12,13 +12,15 @@ before it is merged. Policy lives in requirements/vetting.toml.
   scripts/deps.py bump               write those versions into the .in files (then run lock and vet)
   scripts/deps.py vet [--base REF]   vet what changed since REF (default: origin/main)
   scripts/deps.py vet --all          audit every locked package (daily in CI)
+  scripts/deps.py sbom [VERSION]     CycloneDX SBOM of the app: embedded Python plus every locked runtime package
   scripts/deps.py snapshot           the locks as a GitHub dependency snapshot (CI submits it on every push to main,
                                      so the dependency graph and security alerts track the exact locked versions)
 
 After reading what vet flags for review, record the package in requirements/reviewed.txt (name==version).
 
 vet exit codes: 0 pass, 1 fail (do not merge), 2 needs a person to read the report before merging.
-Runs from the dev environment (.venv); network: pypi.org, files.pythonhosted.org and api.osv.dev only.
+Runs from the dev environment (.venv); network: pypi.org, files.pythonhosted.org, api.osv.dev and Sigstore's trust root
+(tuf-repo-cdn.sigstore.dev) only.
 """
 import argparse
 import concurrent.futures as cf
@@ -32,6 +34,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import tomllib
 import urllib.error
 import urllib.request
@@ -188,13 +191,37 @@ def pick_wheel(rel):
     return min(wheels, key=rank) if wheels else None
 
 
-def provenance(name, version, filename):
+_SIGSTORE = threading.Lock()
+_TRUST_ROOT_FRESH = False
+
+
+def provenance(name, version, filename, sha256):
+    """The verified publishers of one file, from its PyPI attestations (PEP 740), or None if it has none.
+
+    Each attestation is verified with Sigstore (pypi-attestations): the signature, its transparency-log entry,
+    that it covers exactly this file (name and SHA-256), and that the signing identity is the publisher PyPI
+    recorded (e.g. a GitHub repository and workflow). Raises ValueError if an attestation does not verify."""
+    global _TRUST_ROOT_FRESH
     raw = fetch(f"https://pypi.org/integrity/{name}/{version}/{filename}/provenance")
     if not raw:
         return None
-    pubs = {(b["publisher"].get("kind"), b["publisher"].get("repository"))
-            for b in json.loads(raw).get("attestation_bundles", [])}
-    return sorted(f"{k}:{r}" for k, r in pubs) or None
+    from pypi_attestations import AttestationError, Distribution, Provenance
+    import logging
+    logging.getLogger("sigstore").setLevel(logging.ERROR)  # "TUF repository is loaded in offline mode"
+    dist = Distribution(name=filename, digest=sha256)
+    pubs = set()
+    for bundle in Provenance.model_validate_json(raw).attestation_bundles:
+        pub = bundle.publisher
+        for att in bundle.attestations:
+            with _SIGSTORE:  # one trust-root refresh per run, then offline verification
+                try:
+                    att.verify(pub, dist, offline=_TRUST_ROOT_FRESH)
+                except AttestationError as e:
+                    raise ValueError(f"attestation for {filename} does not verify: {e}") from e
+                _TRUST_ROOT_FRESH = True
+        where = getattr(pub, "repository", None) or getattr(pub, "project", None) or "?"
+        pubs.add(f"{pub.kind}:{where}")
+    return sorted(pubs) or None
 
 
 def download(url, sha256):
@@ -301,6 +328,15 @@ def vet_package(name, version, hashes, old_version, deep):
         elif allowed["version"] != version or allowed["sha256"] not in sdist:
             fails.append(f"source-only allowance is for {allowed['version']} ({allowed['sha256'][:12]}…), "
                          f"not this file: review the new sdist")
+    attested = [u for h, u in digests.items() if h in hashes and u["packagetype"] == "bdist_wheel"]
+    if attested:  # verify one locked file's attestations (none = fine, but a broken one fails)
+        f = min(attested, key=lambda u: u["filename"])
+        try:
+            prov = provenance(name, version, f["filename"], f["digests"]["sha256"])
+            if prov and not deep:
+                notes.append(f"attestation verified: {', '.join(prov)}")
+        except ValueError as e:
+            fails.append(str(e))
     changed = old_version != version
     if changed and deep and (name, version) not in EXPEDITED:  # --all audits what is merged
         when = uploaded(rel)
@@ -322,7 +358,10 @@ def _inspect(name, version, rel, old_version, fails, reviews, notes):
         reviews.append(f"new in the dependency tree ({version}): check what it is and who publishes it")
     if not new_wheel:
         return fails, reviews, notes
-    new_prov = provenance(name, version, new_wheel["filename"])
+    try:
+        new_prov = provenance(name, version, new_wheel["filename"], new_wheel["digests"]["sha256"])
+    except ValueError as e:
+        return fails + [str(e)], reviews, notes
     try:
         new_files, problems = wheel_files(download(new_wheel["url"], new_wheel["digests"]["sha256"]))
     except ValueError as e:
@@ -334,14 +373,17 @@ def _inspect(name, version, rel, old_version, fails, reviews, notes):
         old_rel = release(name, old_version)
         old_wheel = pick_wheel(old_rel) if old_rel else None
         if old_wheel:
-            old_prov = provenance(name, old_version, old_wheel["filename"])
+            try:
+                old_prov = provenance(name, old_version, old_wheel["filename"], old_wheel["digests"]["sha256"])
+            except ValueError as e:
+                notes.append(f"previous version's {e}")
             old_files, _ = wheel_files(download(old_wheel["url"], old_wheel["digests"]["sha256"]))
             old_hits, old_facts = scan(old_files)
     if old_prov and not new_prov:
         fails.append(f"provenance lost: {old_version} had a PyPI attestation ({', '.join(old_prov)}), {version} has none")
     elif old_prov and new_prov and old_prov != new_prov:
         fails.append(f"published from a different place: {', '.join(old_prov)} -> {', '.join(new_prov)}")
-    notes.append(f"provenance: {', '.join(new_prov) if new_prov else 'none'}")
+    notes.append(f"provenance (verified): {', '.join(new_prov) if new_prov else 'none'}")
     if new_facts["pth"] - old_facts["pth"] or (old_version is None and new_facts["pth"]):
         reviews.append(f".pth file(s), which run at every Python start: {sorted(new_facts['pth'])}")
     added_native = new_facts["native"] - old_facts["native"]
@@ -415,9 +457,12 @@ def cmd_vet(args):
         n_review += bool(reviews) and not fails
     if removed:
         print(f"\nRemoved from the tree: {', '.join(removed)}")
+    n_attested = sum(any(n.startswith(("attestation verified", "provenance (verified): ")) and not n.endswith(" none")
+                         for n in r[2]) for r in results.values())
     verdict = "FAIL" if n_fail else "NEEDS REVIEW" if n_review else "PASS"
     print(f"\n{verdict}: {n_fail} failing, {n_review} to review, {len(to_check)} vetted, "
-          f"{len(vulns)} with advisories (accepted: {sum(all(i in ACCEPTED for i in ids) for ids in vulns.values())})")
+          f"{len(vulns)} with advisories (accepted: {sum(all(i in ACCEPTED for i in ids) for ids in vulns.values())}), "
+          f"{n_attested} with verified PyPI attestations")
     sys.exit(1 if n_fail else 2 if n_review else 0)
 
 
@@ -469,15 +514,20 @@ def cmd_bump(_args):
     print("Next: scripts/deps.py lock, then scripts/deps.py vet")
 
 
-def _installed_somewhere(marker):
-    """True if a lock entry's marker holds on macOS (the app) or Linux (CI); Windows-only packages are skipped."""
+def _installed_on(marker, plat):
+    """True if a lock entry's environment marker holds on plat ("darwin" for the app, "linux" for CI)."""
     if not marker:
         return True
     from packaging.markers import Marker
-    base = {"python_version": PYTHON, "python_full_version": f"{PYTHON}.0", "implementation_name": "cpython",
-            "platform_python_implementation": "CPython"}
-    return any(Marker(marker).evaluate({**base, "sys_platform": plat, "platform_system": system, "os_name": "posix"})
-               for plat, system in (("darwin", "Darwin"), ("linux", "Linux")))
+    return Marker(marker).evaluate({
+        "python_version": PYTHON, "python_full_version": f"{PYTHON}.0", "implementation_name": "cpython",
+        "platform_python_implementation": "CPython", "os_name": "posix", "sys_platform": plat,
+        "platform_system": {"darwin": "Darwin", "linux": "Linux"}[plat]})
+
+
+def _installed_somewhere(marker):
+    """True if a lock entry is installed on macOS (the app) or Linux (CI); Windows-only packages are skipped."""
+    return _installed_on(marker, "darwin") or _installed_on(marker, "linux")
 
 
 def cmd_snapshot(_args):
@@ -503,6 +553,50 @@ def cmd_snapshot(_args):
         "scanned": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"), "manifests": manifests}, indent=1))
 
 
+def cmd_sbom(args):
+    """CycloneDX 1.6 SBOM of what the app bundle contains (the pmd3 and mvt environments and the embedded
+    Python), with the SHA-256 hashes the build accepts for each package."""
+    import uuid
+    conf = {}
+    for line in (REQ / "runtime.conf").read_text().splitlines():
+        parts = line.split()
+        if len(parts) == 2 and not line.startswith("#"):
+            conf[parts[0]] = parts[1]
+    version = args.version or re.search(r'APP_VERSION = "([^"]+)"', (ROOT / "app/scan/pipeline.py").read_text()).group(1)
+    components, refs = [], {}
+    for env in ("pmd3", "mvt"):
+        for name, e in parse_lock((REQ / f"{env}.txt").read_text()).items():
+            if not _installed_on(e["marker"], "darwin"):  # the app is macOS only
+                continue
+            purl = f"pkg:pypi/{name}@{e['version']}"
+            if purl in refs:
+                refs[purl]["properties"].append({"name": "bugbane:environment", "value": env})
+                continue
+            refs[purl] = {"type": "library", "bom-ref": purl, "name": name, "version": e["version"], "purl": purl,
+                          "hashes": [{"alg": "SHA-256", "content": h} for h in sorted(e["hashes"])],
+                          "properties": [{"name": "bugbane:environment", "value": env}]}
+            components.append(refs[purl])
+    for triple in ("aarch64-apple-darwin", "x86_64-apple-darwin"):
+        if triple in conf:
+            components.append({
+                "type": "application", "bom-ref": f"cpython-{triple}", "name": "cpython", "version": conf["python"],
+                "description": f"python-build-standalone {conf['release']} ({triple}), embedded interpreter",
+                "hashes": [{"alg": "SHA-256", "content": conf[triple]}],
+                "externalReferences": [{"type": "distribution", "url":
+                    f"https://github.com/astral-sh/python-build-standalone/releases/download/{conf['release']}/"
+                    f"cpython-{conf['python']}+{conf['release']}-{triple}-install_only.tar.gz"}]})
+    print(json.dumps({
+        "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+        "serialNumber": f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, 'bugbane-' + version)}",
+        "metadata": {"timestamp": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                     "tools": {"components": [{"type": "application", "name": "scripts/deps.py"}]},
+                     "component": {"type": "application", "bom-ref": "bugbane", "name": "BugBane", "version": version,
+                                   "licenses": [{"license": {"id": "GPL-3.0-or-later"}}],
+                                   "externalReferences": [{"type": "vcs",
+                                                           "url": "https://github.com/heresherbert/BugBane"}]}},
+        "components": components}, indent=1))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -511,12 +605,13 @@ def main():
     sub.add_parser("outdated")
     sub.add_parser("bump")
     sub.add_parser("snapshot")
+    sub.add_parser("sbom").add_argument("version", nargs="?")
     v = sub.add_parser("vet")
     v.add_argument("--base", default="origin/main", help="git ref to compare with (default origin/main)")
     v.add_argument("--all", action="store_true", help="audit every locked package (no content diff)")
     args = p.parse_args()
     {"lock": cmd_lock, "check": cmd_check, "outdated": cmd_outdated, "bump": cmd_bump, "vet": cmd_vet,
-     "snapshot": cmd_snapshot}[args.cmd](args)
+     "snapshot": cmd_snapshot, "sbom": cmd_sbom}[args.cmd](args)
 
 
 if __name__ == "__main__":

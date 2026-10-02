@@ -39,7 +39,8 @@ MVT_PY = TOOLS / "mvt/bin/python"
 HELPER = ROOT / "app/helpers/device_helper.py"
 FILTERED_BACKUP = ROOT / "app/helpers/filtered_backup.py"
 DECRYPT = ROOT / "app/helpers/partial_decrypt.py"
-APP_VERSION = "0.74"
+FETCH_IOCS = ROOT / "app/helpers/fetch_indicators.py"
+APP_VERSION = "0.75"
 NOTICE_VERSION = "2026-09-23"
 
 GB = 1024 ** 3
@@ -427,7 +428,8 @@ class ScanSession:
         with _IOC_LOCK:
             if indicators_stale():
                 self._step("prepare", detail="d.prepare.ioc")
-                self._run_cmd([MVT, "--disable-update-check", "download-iocs"], timeout=300)
+                _, tail = self._run_cmd(fetch_indicators_cmd(), timeout=300)
+                self._log(f"indicator lists: {tail[-1] if tail else 'no answer'}")
         self._adopt_saved_password()
         if self.mode == "full":
             free = free_space()
@@ -876,12 +878,22 @@ def indicators_stale():
     return time.time() - max((p.stat().st_mtime for p in files), default=0) > IOC_MAX_AGE
 
 
+def fetch_indicators_cmd():
+    """Verified download of the public indicator lists (app/helpers/fetch_indicators.py), in MVT's environment
+    and into MVT's indicators folder, so MVT and our checks read the same files."""
+    return [MVT_PY, FETCH_IOCS, "--dest", ioc_module.MVT_INDICATORS_DIR]
+
+
 def refresh_indicators():
     """Download the public indicator lists if they are more than a day old. Runs when the app opens (and again
     before each check), so new spyware fingerprints arrive without an app update. Touches no device."""
     with _IOC_LOCK:
         if indicators_stale():
-            subprocess.run([str(MVT), "--disable-update-check", "download-iocs"], capture_output=True, timeout=300)
+            try:
+                out = subprocess.run(fetch_indicators_cmd(), capture_output=True, text=True, timeout=300).stdout
+                print(f"indicator lists: {out.strip().splitlines()[-1] if out.strip() else 'no answer'}", flush=True)
+            except subprocess.TimeoutExpired:
+                print("indicator lists: timed out", flush=True)
 
 
 def check_for_update():

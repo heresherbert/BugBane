@@ -40,7 +40,7 @@ BugBane.app/Contents/
 ```
 
 - **Read-only once signed.** The launchers set `PYTHONDONTWRITEBYTECODE=1` (everything is precompiled at
-  build time) and ignore the user's Python settings; data goes to Application Support. The build ends by
+  build time, as hash-based `.pyc` files, so the build is reproducible: see docs/SUPPLY-CHAIN.md) and ignore the user's Python settings; data goes to Application Support. The build ends by
   smoke-testing the bundle and re-verifying the signature, which fails if anything wrote into it.
 - **No absolute paths.** Launchers find the interpreter relative to themselves, so the app works wherever it
   is copied; bytecode stores relative source paths, so tracebacks never show the build machine's folders.

@@ -70,6 +70,8 @@ for env in pmd3 mvt; do
   "$PY" -m pip install -q --disable-pip-version-check --no-compile --require-hashes --only-binary :all: \
     --no-binary hexdump --target "$RT/$env/site" -r "$ROOT/requirements/$env.txt"
   rm -rf "$RT/$env/site/bin"               # pip's scripts point at this build folder; we write our own
+  # ...and drop them from the RECORD files too (their hashes depend on the build folder's path)
+  find "$RT/$env/site" -path '*.dist-info/RECORD' -exec sed -i '' '/^\.\.\/\.\.\/bin\//d' {} +
   # .pth files would run code at interpreter start; packages load via PYTHONPATH, which never reads them
   find "$RT/$env/site" -maxdepth 1 -name '*.pth' -print -delete | sed 's/^/  removed /'
 done
@@ -113,8 +115,16 @@ PYGEN
 rsync -a --exclude '__pycache__' --exclude '*.pyc' "$ROOT/app/" "$RES/app/"
 cp "$ROOT/LICENSE" "$ROOT/THIRD_PARTY_NOTICES.md" "$RES/"
 echo "Precompiling…"
-# relative source paths in bytecode (-s): tracebacks never show the build machine's folders
-"$PY" -m compileall -q -j0 -s "$RES/" "$RT/python/lib" "$RT/pmd3/site" "$RT/mvt/site" "$RES/app" >/dev/null || true
+# Reproducible bytecode: the same commit gives byte-identical .pyc files. Each file is compiled in its own
+# process (marshal output depends on what else a process has compiled), as a hash-based .pyc (no source
+# timestamps), with a fixed hash seed (set constants are stored in hash order) and a path relative to
+# Resources/ (tracebacks never show the build machine's folders). Files that don't compile are skipped.
+find "$RT/python/lib" "$RT/pmd3/site" "$RT/mvt/site" "$RES/app" -name '*.py' -print0 \
+  | RES="$RES" PYTHONHASHSEED=0 xargs -0 -P "$(sysctl -n hw.ncpu)" -n 1 "$PY" -S -c '
+import os, py_compile, sys
+f = sys.argv[1]
+py_compile.compile(f, dfile=os.path.relpath(f, os.environ["RES"]),
+                   invalidation_mode=py_compile.PycInvalidationMode.UNCHECKED_HASH)' 2>/dev/null || true
 
 # --- 5. bundle metadata, launcher, icon ----------------------------------------------------------------
 VERSION=$(sed -n 's/^APP_VERSION = "\(.*\)"/\1/p' "$ROOT/app/scan/pipeline.py")

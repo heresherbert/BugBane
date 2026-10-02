@@ -2,7 +2,8 @@
 
 ## Indicators
 
-`mvt download-iocs` fetches MVT's STIX2 feeds (Pegasus, Predator, RCS Lab, Quadream, Operation
+`app/helpers/fetch_indicators.py` downloads MVT's STIX2 feeds and verifies them before use (see
+[SUPPLY-CHAIN.md](SUPPLY-CHAIN.md#threat-data)): Pegasus, Predator, RCS Lab, Quadream, Operation
 Triangulation, Candiru, Cellebrite, NoviSpy, Coruna, DarkSword and more, plus ECHAP's
 stalkerware/watchware list). `scan/iocs.py` indexes them with **exact** matching:
 

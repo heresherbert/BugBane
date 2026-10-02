@@ -37,7 +37,8 @@ show up, and a **coverage matrix** that fails if a new kind of indicator is adde
 Locally the live sweep uses the lists `./setup.sh` downloaded, in MVT's data folder (`$MVT_DATA_FOLDER`, else
 `~/Library/Application Support/mvt` on a Mac or `~/.local/share/mvt` on Linux; `scan/iocs.py` follows MVT's rule).
 
-In CI, the **Detection replay** job downloads the lists with the pinned MVT on every push and pull request and
+In CI, the **Detection replay** job downloads the lists with the app's own verified downloader (strict: a refused,
+shrunken or failed list fails the run) on every push and pull request and
 **daily** (the lists change without any commit here), replays all of them, and writes the table to the run's
 summary page. It sets `BUGBANE_REQUIRE_LIVE_FEEDS=1`, so a failed download fails the run instead of skipping.
 

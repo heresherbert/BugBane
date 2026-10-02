@@ -50,7 +50,8 @@ in the UI). Keep it that way in any fork.
 
 ## Indicator data (downloaded at runtime, not redistributed)
 
-`mvt download-iocs` fetches STIX2 indicator bundles into `~/Library/Application Support/mvt/indicators`.
+`app/helpers/fetch_indicators.py` downloads STIX2 indicator bundles, from the sources listed in MVT's indicator
+index, into `~/Library/Application Support/mvt/indicators`.
 Their sources and terms differ:
 
 | Source | Terms |
