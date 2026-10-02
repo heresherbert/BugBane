@@ -1,4 +1,4 @@
 pytest>=8
 # scripts/brand_assets.py (logo outlines and font subsets); not needed to run or test the app
-fonttools[woff]==4.60.1
+fonttools[woff]==4.60.2
 uharfbuzz==0.51.1
