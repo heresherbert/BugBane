@@ -59,6 +59,8 @@ checks above still apply.
 
 CI runs `deps.py check` and `deps.py vet` on every push and pull request, and audits every locked package daily,
 so an advisory published for a version we already ship fails the next daily run.
+On every push to `main`, CI also submits the locks to GitHub's dependency graph (`deps.py snapshot`), so
+GitHub's security alerts cover the exact installed versions.
 
 ## Updating a dependency
 

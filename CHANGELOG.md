@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.74 (2026-10-03)
+
+### Security
+
+- CI submits the exact locked dependencies (every package and version, transitive ones included) to GitHub's
+  dependency graph on every push, so GitHub's security alerts for this repository track what the app actually
+  installs.
+
 ## 0.73 (2026-10-02)
 
 ### Fixed

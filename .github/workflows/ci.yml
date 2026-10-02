@@ -60,6 +60,31 @@ jobs:
             *) python scripts/deps.py vet --all ;;
           esac
 
+  dependency-graph:
+    name: Submit the locked dependencies to GitHub
+    # GitHub's dependency graph and security alerts then track exactly what the locks install, transitive
+    # packages included, instead of guessing from the files.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required by the dependency submission API; this job only reads the checkout
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install the dev tools from their lock
+        run: |
+          pip install --require-hashes --only-binary :all: -r requirements/dev.txt
+      - name: Submit the snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/deps.py snapshot > snapshot.json
+          gh api "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" --input snapshot.json
+
   detection-replay:
     name: Detection replay (every public indicator)
     runs-on: ubuntu-latest

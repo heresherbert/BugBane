@@ -97,3 +97,15 @@ def test_one_line_run_steps_are_valid_yaml():
         m = re.match(r"\s*(?:- )?run:\s+(?![|>])(.*)", line)
         if m:
             assert ": " not in m.group(1) and not m.group(1).rstrip().endswith(":"), line.strip()
+
+
+def test_snapshot_covers_the_locks_without_windows_only_packages(capsys, monkeypatch):
+    monkeypatch.setenv("GITHUB_SHA", "0" * 40)
+    deps.cmd_snapshot(None)
+    snap = __import__("json").loads(capsys.readouterr().out)
+    pmd3 = snap["manifests"]["requirements/pmd3.txt"]["resolved"]
+    assert pmd3["pkg:pypi/pymobiledevice3@" + deps.explicit_pins("pmd3")["pymobiledevice3"]]["relationship"] == "direct"
+    assert not [p for p in pmd3 if p.startswith("pkg:pypi/pywin32@")]
+    assert any(p.startswith("pkg:pypi/ioregistry@") for p in pmd3)  # macOS-only: installed in the app
+    assert all(r["scope"] == "development" for r in snap["manifests"]["requirements/dev.txt"]["resolved"].values())
+    assert deps._installed_somewhere("sys_platform == 'win32'") is False

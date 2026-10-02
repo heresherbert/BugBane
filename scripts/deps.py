@@ -12,6 +12,8 @@ before it is merged. Policy lives in requirements/vetting.toml.
   scripts/deps.py bump               write those versions into the .in files (then run lock and vet)
   scripts/deps.py vet [--base REF]   vet what changed since REF (default: origin/main)
   scripts/deps.py vet --all          audit every locked package (daily in CI)
+  scripts/deps.py snapshot           the locks as a GitHub dependency snapshot (CI submits it on every push to main,
+                                     so the dependency graph and security alerts track the exact locked versions)
 
 After reading what vet flags for review, record the package in requirements/reviewed.txt (name==version).
 
@@ -467,6 +469,40 @@ def cmd_bump(_args):
     print("Next: scripts/deps.py lock, then scripts/deps.py vet")
 
 
+def _installed_somewhere(marker):
+    """True if a lock entry's marker holds on macOS (the app) or Linux (CI); Windows-only packages are skipped."""
+    if not marker:
+        return True
+    from packaging.markers import Marker
+    base = {"python_version": PYTHON, "python_full_version": f"{PYTHON}.0", "implementation_name": "cpython",
+            "platform_python_implementation": "CPython"}
+    return any(Marker(marker).evaluate({**base, "sys_platform": plat, "platform_system": system, "os_name": "posix"})
+               for plat, system in (("darwin", "Darwin"), ("linux", "Linux")))
+
+
+def cmd_snapshot(_args):
+    import os
+    manifests = {}
+    for env in ENVS:
+        direct = explicit_pins(env)
+        resolved = {}
+        for name, e in parse_lock((REQ / f"{env}.txt").read_text()).items():
+            if _installed_somewhere(e["marker"]):
+                purl = f"pkg:pypi/{name}@{e['version']}"
+                resolved[purl] = {"package_url": purl, "relationship": "direct" if name in direct else "indirect",
+                                  "scope": "development" if env == "dev" else "runtime"}
+        manifests[f"requirements/{env}.txt"] = {"name": f"requirements/{env}.txt",
+                                                "file": {"source_location": f"requirements/{env}.txt"},
+                                                "resolved": resolved}
+    sha = os.environ.get("GITHUB_SHA") or subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
+                                                          text=True, check=True).stdout.strip()
+    print(json.dumps({
+        "version": 0, "sha": sha, "ref": os.environ.get("GITHUB_REF", "refs/heads/main"),
+        "job": {"correlator": "bugbane-deps-locks", "id": os.environ.get("GITHUB_RUN_ID", "local")},
+        "detector": {"name": "bugbane-deps", "version": "1", "url": "https://github.com/heresherbert/BugBane"},
+        "scanned": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"), "manifests": manifests}, indent=1))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -474,11 +510,13 @@ def main():
     sub.add_parser("check")
     sub.add_parser("outdated")
     sub.add_parser("bump")
+    sub.add_parser("snapshot")
     v = sub.add_parser("vet")
     v.add_argument("--base", default="origin/main", help="git ref to compare with (default origin/main)")
     v.add_argument("--all", action="store_true", help="audit every locked package (no content diff)")
     args = p.parse_args()
-    {"lock": cmd_lock, "check": cmd_check, "outdated": cmd_outdated, "bump": cmd_bump, "vet": cmd_vet}[args.cmd](args)
+    {"lock": cmd_lock, "check": cmd_check, "outdated": cmd_outdated, "bump": cmd_bump, "vet": cmd_vet,
+     "snapshot": cmd_snapshot}[args.cmd](args)
 
 
 if __name__ == "__main__":
