@@ -8,13 +8,13 @@ an embedded Python (next section), all pinned in `requirements/`.
 | Component | Used for | How it's used | License |
 |---|---|---|---|
 | [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) 11.17.0 | USB pairing, backup, crash reports, sysdiagnose | imported in-process by `app/helpers/device_helper.py` and `app/helpers/filtered_backup.py` | GPL-3.0 |
-| [Mobile Verification Toolkit (MVT)](https://github.com/mvt-project/mvt) 2026.9.21 | backup analysis, indicator download | run as a **separate program** (`mvt`, `mvt-ios`) | MVT License 1.1 (MPL-2.0-based, adds a consent requirement) |
+| [Mobile Verification Toolkit (MVT)](https://github.com/mvt-project/mvt) 2026.9.28 | backup analysis, indicator download | run as a **separate program** (`mvt`, `mvt-ios`) | MVT License 1.1 (MPL-2.0-based, adds a consent requirement) |
 | [iphone_backup_decrypt](https://github.com/jsharkey13/iphone_backup_decrypt) 0.10.0 (installed with MVT) | decrypting backup files | imported by `app/helpers/partial_decrypt.py` | MIT |
 
 ## Embedded Python (app bundle only)
 
 `BugBane.app` embeds CPython 3.12 from [python-build-standalone](https://github.com/astral-sh/python-build-standalone)
-(pinned with SHA-256 in `requirements/runtime.txt`). The build scripts are MPL-2.0; CPython is under the
+(pinned with SHA-256 in `requirements/runtime.conf`). The build scripts are MPL-2.0; CPython is under the
 PSF License (its `LICENSE.txt`, which also covers components CPython itself includes, ships inside the
 bundle at `runtime/python/lib/python3.12/LICENSE.txt`). The runtime statically links third-party libraries
 such as OpenSSL (Apache-2.0), SQLite (public domain), libffi (MIT), XZ, bzip2, expat and mpdecimal (permissive

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.69 (2026-10-02)
+
+### Added
+
+- **Update check.** Each time BugBane opens it asks GitHub whether a newer release exists and, if so, shows
+  "Update available" in the toolbar with a link to the release. Nothing about the person, the Mac or the phone
+  is sent.
+- **Fresh threat lists on every launch.** Indicator lists older than a day are downloaded when the app opens
+  (and still before each check), so new spyware and stalkerware fingerprints arrive without an app update.
+- **Daily dependency updates.** Dependabot proposes new MVT and pymobiledevice3 releases the day they appear;
+  CI tests each one, including a replay of every public indicator.
+
+### Changed
+
+- The privacy screen and README list the GitHub release check among the app's network calls.
+- The embedded-Python pin moved to `requirements/runtime.conf`.
+- MVT 2026.9.28 (from 2026.9.21); test and build tools and CI actions updated.
+
 ## 0.68 (2026-10-02)
 
 First public release.
@@ -7,7 +25,7 @@ First public release.
 ### Added
 
 - **Self-contained app.** `BugBane.app` carries its own Python 3.12 (python-build-standalone, SHA-256 pinned in
-  `requirements/runtime.txt`) with pymobiledevice3 and MVT, so running it needs no Homebrew, setup or Terminal.
+  `requirements/runtime.conf`) with pymobiledevice3 and MVT, so running it needs no Homebrew, setup or Terminal.
   The bundle is never written to; data lives in `~/Library/Application Support/Bugbane`. Apple silicon for now.
 - **Clean installs.** `install.sh` builds in a temporary folder, finds every other copy of the app by bundle ID
   and name, moves strays to the Trash and leaves exactly one in `~/Applications`. History is kept.

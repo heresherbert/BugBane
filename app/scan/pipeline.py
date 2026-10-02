@@ -39,7 +39,7 @@ MVT_PY = TOOLS / "mvt/bin/python"
 HELPER = ROOT / "app/helpers/device_helper.py"
 FILTERED_BACKUP = ROOT / "app/helpers/filtered_backup.py"
 DECRYPT = ROOT / "app/helpers/partial_decrypt.py"
-APP_VERSION = "0.68"
+APP_VERSION = "0.69"
 NOTICE_VERSION = "2026-09-23"
 
 GB = 1024 ** 3
@@ -48,6 +48,9 @@ BACKUP_SPACE_NEEDED = 8 * GB  # database-only copy + its decrypted twin, with he
 BACKUP_ATTEMPTS = 3
 SYSDIAG_TIMEOUT = 30 * 60
 IOC_MAX_AGE = 24 * 3600
+UPDATE_REPO = "heresherbert/BugBane"
+UPDATE = {}  # {"latest": "0.69", "url": "https://github.com/..."} once a newer public release is known
+_IOC_LOCK = threading.Lock()  # the launch-time refresh and a check's own refresh never download at once
 KEEP_MARKER = ".keep"
 APPLE_ROOTS = Path(__file__).with_name("apple_roots.pem")
 
@@ -136,7 +139,7 @@ class ScanSession:
                 "prompt": self.prompt, "results": self.results, "history_id": self.history_id,
                 "consent": bool(self.consent), "raw_deleted": self.raw_deleted, "kept": self.kept,
                 "free_space": fmt_gb(free_space()), "log": self.log[-8:],
-                "restore": self._restore_snapshot(),
+                "restore": self._restore_snapshot(), "update": dict(UPDATE) or None,
             }
 
     def _restore_snapshot(self):
@@ -417,11 +420,10 @@ class ScanSession:
 
     def _prepare(self):
         d = self.device
-        indicators = list(ioc_module.MVT_INDICATORS_DIR.glob("*.stix2"))
-        newest = max((p.stat().st_mtime for p in indicators), default=0)
-        if time.time() - newest > IOC_MAX_AGE:
-            self._step("prepare", detail="d.prepare.ioc")
-            self._run_cmd([MVT, "--disable-update-check", "download-iocs"], timeout=300)
+        with _IOC_LOCK:
+            if indicators_stale():
+                self._step("prepare", detail="d.prepare.ioc")
+                self._run_cmd([MVT, "--disable-update-check", "download-iocs"], timeout=300)
         self._adopt_saved_password()
         if self.mode == "full":
             free = free_space()
@@ -864,6 +866,43 @@ class ScanSession:
 
 
 # ---- History (results only) ---------------------------------------------------
+
+def indicators_stale():
+    files = list(ioc_module.MVT_INDICATORS_DIR.glob("*.stix2"))
+    return time.time() - max((p.stat().st_mtime for p in files), default=0) > IOC_MAX_AGE
+
+
+def refresh_indicators():
+    """Download the public indicator lists if they are more than a day old. Runs when the app opens (and again
+    before each check), so new spyware fingerprints arrive without an app update. Touches no device."""
+    with _IOC_LOCK:
+        if indicators_stale():
+            subprocess.run([str(MVT), "--disable-update-check", "download-iocs"], capture_output=True, timeout=300)
+
+
+def check_for_update():
+    """Ask GitHub whether a newer public release exists. Sends nothing about the person, the Mac or the phone."""
+    try:
+        req = urllib.request.Request(f"https://api.github.com/repos/{UPDATE_REPO}/releases/latest",
+                                     headers={"Accept": "application/vnd.github+json", "User-Agent": "BugBane"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            release = json.load(r)
+    except Exception:
+        return None
+    latest, url = str(release.get("tag_name", "")).lstrip("v"), str(release.get("html_url", ""))
+    if checks._version(latest) > checks._version(APP_VERSION) and url.startswith(f"https://github.com/{UPDATE_REPO}/"):
+        UPDATE.update(latest=latest, url=url)
+    return dict(UPDATE) or None
+
+
+def on_launch():
+    """Every time the app opens: look for a newer BugBane, then bring the threat lists up to date."""
+    check_for_update()
+    try:
+        refresh_indicators()
+    except Exception:
+        pass  # offline or MVT missing: the check refreshes again before it runs
+
 
 def save_history_entry(entry_id, results):
     HISTORY.mkdir(parents=True, exist_ok=True)

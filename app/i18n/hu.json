@@ -356,7 +356,7 @@
   "privacy.l.change.t": "Amit módosít, majd visszaállít",
   "privacy.l.change.b": "Az ellenőrzés végéig ez a Mac az iPhone megbízható számítógépei közé kerül. Ha az iPhone biztonsági mentései nincsenek titkosítva, a BugBane az ellenőrzés idejére ideiglenes jelszóval bekapcsolja a titkosítást, a jelszót ennek a Macnek a kulcskarikájában tárolja, és a végén kikapcsolja a titkosítást.",
   "privacy.l.online.t": "Ami elhagyja ezt a Macet",
-  "privacy.l.online.b": "Önről és az iPhone-járól semmi. A BugBane csak a nyilvános kémprogram-ujjlenyomatok listáit és az Apple nyilvános iOS-verziólistáját tölti le.",
+  "privacy.l.online.b": "Önről és az iPhone-járól semmi. A BugBane csak a nyilvános kémprogram-ujjlenyomatok listáit és az Apple nyilvános iOS-verziólistáját tölti le, valamint a GitHubon ellenőrzi, van-e újabb BugBane.",
   "privacy.l.stays.t": "Ami megmarad",
   "privacy.l.stays.b": "Az iPhone-ról semmi: a másolatot az ellenőrzés végén vagy leállításakor törli. A begépelt mentési jelszót csak a memóriában tartja. Az eredményt csak akkor menti el, ha alább az előzményeket választja.",
   "privacy.legend": "Hozzájárulás",
@@ -427,5 +427,6 @@
   "v.partial.fix.snapshot": "Hiányzik a diagnosztikai pillanatkép. Ha ezt is szeretné, futtassa újra az ellenőrzést, és amikor a BugBane kéri, nyomja meg a három gombot.",
   "v.partial.fix.backup": "Nem készült ellenőrizhető biztonsági mentés. Ha ezt is szeretné, futtasson újra teljes ellenőrzést, és hagyja, hogy a mentés befejeződjön.",
   "v.partial.fix.other": "Az okot „Az összes ellenőrzés” résznél találja.",
-  "chk.apps.none": "Az Apple saját alkalmazásain kívül nincs telepített alkalmazás."
+  "chk.apps.none": "Az Apple saját alkalmazásain kívül nincs telepített alkalmazás.",
+  "nav.update": "Frissítés érhető el: BugBane {v}"
 }

@@ -1,0 +1,17 @@
+# Keeps the forensic toolchain current. New MVT and pymobiledevice3 releases add parsers, indicator sources and
+# support for new iOS versions; Dependabot opens a pull request the day one appears, and CI (tests plus the replay
+# of every public indicator) checks it before it is merged. The indicator lists themselves need no update here:
+# the app downloads them when it opens and before each check, and CI replays them daily.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /requirements
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies]

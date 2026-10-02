@@ -112,6 +112,7 @@ svg.g { display: block; flex: none; }
 .bar nav { margin-left: auto; display: flex; gap: 2px; align-items: center; }
 .tb { background: none; border: 0; color: var(--ink-2); font-size: 13px; line-height: 18px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; }
 .tb:hover { background: var(--fill); color: var(--ink); }
+.tb.upd { color: var(--ink); text-decoration: none; border: 1px solid var(--rule-strong); }
 .seg { display: inline-flex; background: var(--fill); border-radius: 7px; padding: 2px; margin: 0 6px; }
 .seg button { border: 0; background: none; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-2); padding: 2px 10px; border-radius: 5px; }
 .seg button[aria-pressed="true"] { background: var(--rule-strong); color: var(--ink); }

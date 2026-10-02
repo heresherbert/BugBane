@@ -33,7 +33,7 @@ BugBane.app/Contents/
   MacOS/launcher            starts runtime/pmd3/bin/python app/server.py, or reopens the running one
   Resources/app/            the app code (precompiled)
   Resources/runtime/python/ embedded CPython 3.12 (python-build-standalone, SHA-256 pinned in
-                            requirements/runtime.txt), relocatable, own OpenSSL and SQLite
+                            requirements/runtime.conf), relocatable, own OpenSSL and SQLite
   Resources/runtime/pmd3|mvt/site/   the two tool environments (pip --target, pinned requirements)
   Resources/runtime/pmd3|mvt/bin/    small sh launchers: python, pymobiledevice3, mvt, mvt-ios
 ```

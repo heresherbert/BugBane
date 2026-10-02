@@ -161,6 +161,7 @@ def main():
     RUN.mkdir(parents=True, exist_ok=True)
     pipeline.sweep_leftovers()
     SESSION = pipeline.ScanSession()
+    threading.Thread(target=pipeline.on_launch, daemon=True).start()  # updates and fresh threat lists
     try:
         httpd = LocalServer(("127.0.0.1", PREFERRED_PORT), Handler)
     except OSError:  # preferred port busy: take any free one

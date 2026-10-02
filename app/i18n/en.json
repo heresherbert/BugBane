@@ -356,7 +356,7 @@
   "privacy.l.change.t": "What it changes, then undoes",
   "privacy.l.change.b": "This Mac becomes one of the iPhone's trusted computers until the check ends. If the iPhone's backups aren't encrypted, BugBane turns encryption on for the check with a temporary password, keeps that password in this Mac's Keychain, and turns encryption off again at the end.",
   "privacy.l.online.t": "What leaves this Mac",
-  "privacy.l.online.b": "Nothing about you or your iPhone. BugBane only downloads the public spyware fingerprint lists and Apple's public list of iOS versions.",
+  "privacy.l.online.b": "Nothing about you or your iPhone. BugBane only downloads the public spyware fingerprint lists and Apple's public list of iOS versions, and asks GitHub whether a newer BugBane is available.",
   "privacy.l.stays.t": "What stays afterwards",
   "privacy.l.stays.b": "Nothing from the iPhone: the copy is erased when the check ends or when you stop it. A backup password you type is kept only in memory. The result is saved only if you choose History below.",
   "privacy.legend": "Consent",
@@ -427,5 +427,6 @@
   "v.partial.fix.snapshot": "The diagnostic snapshot is missing. To include it, run the check again and press the three buttons when BugBane asks.",
   "v.partial.fix.backup": "No backup was checked. To include it, run a full check again and let the backup finish.",
   "v.partial.fix.other": "Under All checks, each one says why.",
-  "chk.apps.none": "No apps installed apart from Apple's own."
+  "chk.apps.none": "No apps installed apart from Apple's own.",
+  "nav.update": "Update available: BugBane {v}"
 }

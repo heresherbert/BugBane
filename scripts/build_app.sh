@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds a self-contained BugBane.app: an embedded Python (requirements/runtime.txt, checksum-verified),
+# Builds a self-contained BugBane.app: an embedded Python (requirements/runtime.conf, checksum-verified),
 # the pymobiledevice3 and MVT packages, the app code, a launcher and the icon. Running it needs no
 # Homebrew, no setup.sh and no Terminal. Data goes to ~/Library/Application Support/Bugbane
 # (app/scan/paths.py); the bundle itself is never written to. Ad-hoc signed for local use; Developer ID
@@ -23,7 +23,7 @@ case "$(uname -m)" in
   x86_64) TRIPLE=x86_64-apple-darwin ;;
   *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
 esac
-PIN="$ROOT/requirements/runtime.txt"
+PIN="$ROOT/requirements/runtime.conf"
 RELEASE=$(awk '$1=="release"{print $2}' "$PIN")
 PYVER=$(awk '$1=="python"{print $2}' "$PIN")
 SHA=$(awk -v t="$TRIPLE" '$1==t{print $2}' "$PIN")

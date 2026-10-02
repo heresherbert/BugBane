@@ -69,6 +69,9 @@ function chrome() {
     document.getElementById(id).textContent = T(key);
   }
   document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === ui.lang)));
+  const upd = ui.state && ui.state.update, link = document.getElementById("nav-update");
+  link.hidden = !upd;
+  if (upd) { link.textContent = T("nav.update", { v: upd.latest }); link.href = upd.url; }
 }
 
 // ---- API ------------------------------------------------------------------------------------------
