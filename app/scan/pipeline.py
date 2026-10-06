@@ -40,7 +40,7 @@ HELPER = ROOT / "app/helpers/device_helper.py"
 FILTERED_BACKUP = ROOT / "app/helpers/filtered_backup.py"
 DECRYPT = ROOT / "app/helpers/partial_decrypt.py"
 FETCH_IOCS = ROOT / "app/helpers/fetch_indicators.py"
-APP_VERSION = "0.75"
+APP_VERSION = "0.76"
 NOTICE_VERSION = "2026-09-23"
 
 GB = 1024 ** 3

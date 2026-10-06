@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.76 (2026-10-06)
+
+### Changed
+
+- Development tooling: uv updated to 0.12.20.
+
 ## 0.75 (2026-10-03)
 
 ### Security
