@@ -171,3 +171,37 @@ def test_visit_time_handles_milliseconds_and_microseconds():
 def test_browser_history_survives_an_unreadable_manifest(tmp_path):
     (tmp_path / "Manifest.db").write_bytes(b"not a database")
     assert checks.check_browser_history(tmp_path, IOCIndex(), set())["status"] == "skipped"
+
+
+def test_browser_web_hits_say_where_when_and_how_to_clear():
+    from scan import i18n
+    famisafe = Indicator("300624.com", "domain", "FamiSafe", "stalkerware.stix2", "stalkerware")
+    june5 = checks._iso_epoch("2026-06-05 10:01:15.000000")
+    where = checks.web_where("webkit_resource_load_statistics", june5, "AppDomain-org.mozilla.ios.Firefox")
+    level, key, params = checks._hit(famisafe, "webkit_resource_load_statistics", False, where)
+    assert (level, key) == ("warn", "hit.stalk.web.vendor.dated")
+    en, hu = i18n.t(key, "en", params), i18n.t(key, "hu", params)
+    assert "Firefox's stored website data, 5 Jun 2026" in en and "Closing tabs doesn't remove it" in en
+    assert "Data Management" in en and "a Firefox tárolt webhelyadataiban (2026. jún. 5.)" in hu
+    assert "{" not in en + hu and "<br>Where: Firefox" in en  # all placeholders filled; place on its own line
+    history = checks.web_where("firefox_history", checks._visit_epoch(1780617600000))
+    assert history["t"] == "hit.web.where.history" and history["p"]["clear"]["t"] == "hit.web.clear.firefox"
+    assert checks.web_where("safari_history", june5)["p"]["browser"] == "Safari"
+    # not a browser, or no time: the plain wording, as in results saved by older versions
+    assert checks.web_where("sms", june5) is None and checks.web_where("firefox_history", None) is None
+    assert checks._hit(famisafe, "webkit_resource_load_statistics", False, None)[1] == "hit.stalk.web.vendor"
+    # reported once; the repeat keeps its own place and time
+    mvt = checks.result("mvt", [checks.item(level, key, params)], "chk.mvt.sum")
+    browsers = checks.result("browsers", [checks.item(*checks._hit(famisafe, "history", False, history))],
+                             "chk.browsers.sum")
+    checks.merge_vendor_web_hits([mvt, browsers])
+    again = browsers["items"][0]
+    assert again["key"] == "hit.stalk.web.also.dated" and "browsing history" in i18n.t(again["key"], "en", again["params"])
+    assert checks._visit_epoch(10**30) is None and checks._iso_epoch("9999-01-01 00:00:00") is None
+
+
+def test_hungarian_dates_get_no_double_full_stop():
+    from scan import i18n
+    where = checks.web_where("firefox_history", checks._visit_epoch(1780617600000))
+    hu = i18n.t(where["t"], "hu", where["p"])
+    assert ".." not in hu and "(2026. jún. 5.)" in hu

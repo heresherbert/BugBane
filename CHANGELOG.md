@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.77 (2026-10-14)
+
+### Changed
+
+- A website of a monitoring-app maker seen in a browser (for example a Wondershare page, from the maker of
+  FamiSafe) now says which browser and what kind of record it was found in (saved history or stored website
+  data), on which date, that closing tabs doesn't remove it, and how to clear it in Firefox, Safari or Chrome.
+  Results saved by earlier versions keep their original wording.
+
 ## 0.76 (2026-10-06)
 
 ### Changed

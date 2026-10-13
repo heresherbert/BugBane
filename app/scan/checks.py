@@ -105,8 +105,38 @@ VENDORS = {
 }
 
 
-def _hit(indicator, source, vendor_installed):
-    """Level and message for an indicator hit, given where it was seen."""
+# Which browser a record belongs to, from the MVT module or the backup domain it came from
+BROWSER_HINTS = (("mozilla", "Firefox"), ("firefox", "Firefox"), ("chrome", "Chrome"), ("safari", "Safari"),
+                 ("homedomain", "Safari"))
+
+
+def web_where(source, when, domain=""):
+    """Where and when a browsing record was found, as a nested message, or None if the browser is unknown.
+
+    source: the MVT module (or "history" for our Firefox check); when: a Unix time; domain: the backup domain
+    (e.g. AppDomain-org.mozilla.ios.Firefox). Tells the person that the record sits in saved history or website
+    data, which closing tabs doesn't remove, and how to clear it in that browser."""
+    hint = f"{source} {domain}".lower()
+    browser = next((name for needle, name in BROWSER_HINTS if needle in hint), None)
+    if not browser or not when:
+        return None
+    kind = "history" if "history" in source else "data"
+    return {"t": f"hit.web.where.{kind}", "p": {"browser": browser, "date": {"d": int(when)},
+                                                "clear": {"t": f"hit.web.clear.{browser.lower()}"}}}
+
+
+def _iso_epoch(text):
+    """Unix time of an MVT ISO timestamp (UTC), or None."""
+    try:
+        epoch = dt.datetime.fromisoformat(text.strip().replace("Z", "").replace(" ", "T")[:26]) \
+            .replace(tzinfo=dt.timezone.utc).timestamp()
+    except (ValueError, AttributeError):
+        return None
+    return epoch if 0 < epoch < LATEST_PLAUSIBLE else None
+
+
+def _hit(indicator, source, vendor_installed, where=None):
+    """Level and message for an indicator hit, given where it was seen (where: see web_where)."""
     params = {"malware": indicator.malware}
     if indicator.category == "mercenary":
         key = "hit.merc.msg" if any(k in source for k in MESSAGE_MODULES) else "hit.merc"
@@ -114,10 +144,15 @@ def _hit(indicator, source, vendor_installed):
     if any(k in source for k in BROWSING_MODULES) and not vendor_installed:
         # e.g. a shared corporate analytics domain of a company that also sells a monitoring app
         vendor = VENDORS.get(indicator.malware)
+        dated = (".dated", {"where": where}) if where else ("", {})
         if vendor:
-            return "warn", "hit.stalk.web.vendor", {**params, "vendor": vendor[0], "products": vendor[1]}
-        return "warn", "hit.stalk.web", params
+            return "warn", "hit.stalk.web.vendor" + dated[0], {**params, "vendor": vendor[0], "products": vendor[1],
+                                                               **dated[1]}
+        return "warn", "hit.stalk.web" + dated[0], {**params, **dated[1]}
     return "alert", "hit.stalk", params
+
+
+WEB_HIT_KEYS = ("hit.stalk.web", "hit.stalk.web.vendor", "hit.stalk.web.dated", "hit.stalk.web.vendor.dated")
 
 
 def merge_vendor_web_hits(results):
@@ -126,11 +161,13 @@ def merge_vendor_web_hits(results):
     for r in results:
         changed = False
         for i in r["items"]:
-            if i["key"] not in ("hit.stalk.web", "hit.stalk.web.vendor"):
+            if i["key"] not in WEB_HIT_KEYS:
                 continue
             malware = i["params"]["malware"]
             if malware in seen:
-                i.update(level="info", key="hit.stalk.web.also", params={"malware": malware})
+                where = i["params"].get("where")
+                i.update(level="info", key="hit.stalk.web.also" + (".dated" if where else ""),
+                         params={"malware": malware, **({"where": where} if where else {})})
                 changed = True
             seen.add(malware)
         if changed and r["status"] in LEVELS:
@@ -418,9 +455,10 @@ def check_mvt_results(mvt_out, iocs, installed_ids):
             if ind is None:
                 cat = "stalkerware" if "stalkerware" in mi.get("stix2_file_name", "") else "mercenary"
                 ind = Indicator(value, mi.get("type", ""), mi.get("name", "unknown"), mi.get("stix2_file_name", ""), cat)
-            level, key, params = _hit(ind, module, _vendor_installed(iocs, ind.malware, installed_ids))
             ev = det.get("event") or {}
             when = ev.get("last_seen_isodate") or ev.get("isodate") or det.get("event_time") or ""
+            level, key, params = _hit(ind, module, _vendor_installed(iocs, ind.malware, installed_ids),
+                                      web_where(module, _iso_epoch(when), ev.get("domain", "")))
             items.append(item(level, key, params,
                               f"{module}: {value} ({ind.malware}) {when[:19] + ' UTC' if when else ''} {ev.get('domain', '')}".strip()))
     counts = {}
@@ -452,14 +490,22 @@ def _manifest_file(backup_dec, domain_like, path):
         return p if p.exists() else None
 
 
-def _visit_time(ts):
-    """Format a visit timestamp: milliseconds since 1970 (Firefox for iOS), or microseconds (desktop PRTime)."""
+LATEST_PLAUSIBLE = 32503680000  # 1 Jan 3000: anything later is a corrupt or misread timestamp
+
+
+def _visit_epoch(ts):
+    """Unix time of a visit timestamp: milliseconds since 1970 (Firefox for iOS), or microseconds (PRTime).
+    None if it is missing or implausible."""
     if not isinstance(ts, (int, float)) or ts <= 0:
-        return ""
-    try:
-        return dt.datetime.fromtimestamp(ts / (1_000_000 if ts > 1e14 else 1000)).strftime("%Y-%m-%d %H:%M")
-    except (ValueError, OverflowError, OSError):
-        return ""
+        return None
+    epoch = ts / (1_000_000 if ts > 1e14 else 1000)
+    return epoch if epoch < LATEST_PLAUSIBLE else None
+
+
+def _visit_time(ts):
+    """A visit timestamp as "YYYY-MM-DD HH:MM" local time, or "" (see _visit_epoch)."""
+    epoch = _visit_epoch(ts)
+    return dt.datetime.fromtimestamp(epoch).strftime("%Y-%m-%d %H:%M") if epoch else ""
 
 
 def check_browser_history(backup_dec, iocs, installed_ids):
@@ -488,7 +534,8 @@ def check_browser_history(backup_dec, iocs, installed_ids):
             if ind and host not in seen:
                 seen.add(host)
                 when = _visit_time(ts)
-                level, key, params = _hit(ind, "history", _vendor_installed(iocs, ind.malware, installed_ids))
+                level, key, params = _hit(ind, "history", _vendor_installed(iocs, ind.malware, installed_ids),
+                                          web_where(f"{browser.lower()}_history", _visit_epoch(ts)))
                 items.append(item(level, key, params, f"{browser}: {host} ({ind.malware}) {when}".strip()))
     if not total:
         return skipped("browsers", "chk.browsers.nohist")
