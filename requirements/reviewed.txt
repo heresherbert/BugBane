@@ -65,7 +65,7 @@ packaging==26.3                          # 2026-10-02 baseline: full wheel scan,
 parameter-decorators==0.0.2              # 2026-10-02 baseline: full wheel scan, nothing suspicious
 parso==0.8.7                             # 2026-10-02 baseline: full wheel scan, nothing suspicious
 pexpect==4.9.0                           # 2026-10-02 baseline: full wheel scan, nothing suspicious
-pillow==12.3.0                           # 2026-10-02 baseline: full wheel scan, nothing suspicious
+pillow==13.0.0                           # 2026-10-02 baseline: full wheel scan, nothing suspicious
 pluggy==1.6.0                            # 2026-10-02 baseline: full wheel scan, nothing suspicious
 plumbum==2.0.2                           # 2026-10-02 baseline: full wheel scan, nothing suspicious
 pmd-net-addr==0.0.3                      # 2026-10-02 baseline: full wheel scan, nothing suspicious
