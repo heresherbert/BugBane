@@ -19,7 +19,7 @@ betterproto2==0.10.0                     # 2026-10-02 baseline: full wheel scan,
 bpylist2==4.1.1                          # 2026-10-02 baseline: full wheel scan, nothing suspicious
 brotli==1.2.0                            # 2026-10-02 baseline: full wheel scan, nothing suspicious
 brotlicffi==1.2.0.2                      # 2026-10-02 baseline: full wheel scan, nothing suspicious
-certifi==2026.7.22                       # 2026-10-02 baseline: full wheel scan, nothing suspicious
+certifi==2026.10.19                       # 2026-10-02 baseline: full wheel scan, nothing suspicious
 cffi==2.1.1                              # 2026-10-02 baseline: full wheel scan, nothing suspicious
 chardet==7.5.1                           # 2026-10-02 baseline: full wheel scan, nothing suspicious
 charset-normalizer==3.5.1                # 2026-10-02 baseline: full wheel scan, nothing suspicious
