@@ -147,3 +147,4 @@ sigstore==4.5.0                          # 2026-10-03 owner approved (PR #10): d
 sigstore-models==0.0.6                   # 2026-10-03 owner approved (PR #10): dev-only verifier deps, publishers checked
 sigstore-rekor-types==0.0.18             # 2026-10-03 owner approved (PR #10): dev-only verifier deps, publishers checked
 tuf==7.0.1                               # 2026-10-03 owner approved (PR #10): dev-only verifier deps, publishers checked
+dnspython==2.9.1                         # 2026-11-09 owner approved: base64 decodes of DNS key/signature records (validate=True), no exec; dev-only

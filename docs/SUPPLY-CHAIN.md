@@ -58,7 +58,7 @@ version and, for every package that changed or is new:
   is and who publishes it.
 
 Results: **pass** (merge), **fail** (don't), or **needs review**. After reading what was flagged, the reviewer
-records the package in `requirements/reviewed.txt`; review items for it then become notes, while the hard
+records the package in `requirements/reviewed.list`; review items for it then become notes, while the hard
 checks above still apply.
 
 CI runs `deps.py check` and `deps.py vet` on every push and pull request, and audits every locked package daily,

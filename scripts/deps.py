@@ -5,7 +5,8 @@ Every package BugBane installs is pinned to an exact version and SHA-256 hash in
 (generated from the hand-edited requirements/<env>.in), and every change to those locks has to pass `vet`
 before it is merged. Policy lives in requirements/vetting.toml.
 
-  scripts/deps.py lock [--upgrade]   regenerate the locks from the .in files (uv, all platforms, wheels only,
+  scripts/deps.py lock [--upgrade | --upgrade-package NAME ...]
+                                     regenerate the locks from the .in files (uv, all platforms, wheels only,
                                      nothing newer than the cooldown except the explicit pins in .in)
   scripts/deps.py check              the locks match the .in files (nothing hand-edited)
   scripts/deps.py outdated           newer releases of the explicit pins that are past the cooldown
@@ -16,7 +17,7 @@ before it is merged. Policy lives in requirements/vetting.toml.
   scripts/deps.py snapshot           the locks as a GitHub dependency snapshot (CI submits it on every push to main,
                                      so the dependency graph and security alerts track the exact locked versions)
 
-After reading what vet flags for review, record the package in requirements/reviewed.txt (name==version).
+After reading what vet flags for review, record the package in requirements/reviewed.list (name==version).
 
 vet exit codes: 0 pass, 1 fail (do not merge), 2 needs a person to read the report before merging.
 Runs from the dev environment (.venv); network: pypi.org, files.pythonhosted.org, api.osv.dev and Sigstore's trust root
@@ -53,9 +54,9 @@ COOLDOWN = dt.timedelta(days=POLICY["cooldown_days"])
 SOURCE_ONLY = {canonicalize_name(k): v for k, v in POLICY.get("source_only", {}).items()}
 ACCEPTED = {a["id"]: a for a in POLICY.get("accepted_advisory", [])}
 EXPEDITED = {(canonicalize_name(e["package"]), e["version"]) for e in POLICY.get("expedite", [])}
-# name==version lines a person has read in full after vet asked for review (requirements/reviewed.txt)
+# name==version lines a person has read in full after vet asked for review (requirements/reviewed.list)
 REVIEWED = {(canonicalize_name(m.group(1)), m.group(2)) for m in re.finditer(
-    r"(?m)^([A-Za-z0-9._-]+)==(\S+)", (REQ / "reviewed.txt").read_text())}
+    r"(?m)^([A-Za-z0-9._-]+)==(\S+)", (REQ / "reviewed.list").read_text())}
 NOW = dt.datetime.now(dt.timezone.utc)
 
 # Code patterns worth a person's eyes when they appear in a new version of a package. Counted per file; only
@@ -124,6 +125,8 @@ def uv():
 def cmd_lock(args):
     for env in ENVS:
         cmd = lock_command(env, f"requirements/{env}.txt") + (["--upgrade"] if args.upgrade else [])
+        for name in args.upgrade_package:
+            cmd += ["--upgrade-package", name]
         subprocess.run([uv(), *cmd[1:], "-q"], cwd=ROOT, check=True)
         print(f"locked requirements/{env}.txt: {len(parse_lock((REQ / f'{env}.txt').read_text()))} packages")
 
@@ -600,7 +603,10 @@ def cmd_sbom(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("lock").add_argument("--upgrade", action="store_true", help="also move unchanged transitive pins")
+    lock = sub.add_parser("lock")
+    lock.add_argument("--upgrade", action="store_true", help="also move unchanged transitive pins")
+    lock.add_argument("--upgrade-package", action="append", default=[], metavar="NAME",
+                      help="move only this package to its newest allowed version (repeatable; for security fixes)")
     sub.add_parser("check")
     sub.add_parser("outdated")
     sub.add_parser("bump")

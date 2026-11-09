@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.78 (2026-11-09)
+
+### Security
+
+- Pillow 13.0.0 (from 12.3.0) and certifi 2026.10.23 (from 2026.7.22) in the app, fixing published
+  vulnerabilities in the locked versions. Development tools updated for the same reason: pyasn1 0.6.5,
+  dnspython 2.9.1, brotli 1.2.1, brotlicffi 1.2.1.0 and uv 0.13.6.
+- The list of reviewed package versions is now `requirements/reviewed.list`, so GitHub no longer reads it as a
+  requirements file and raises alerts for versions that aren't installed.
+
 ## 0.77 (2026-10-14)
 
 ### Changed
