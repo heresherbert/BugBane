@@ -104,7 +104,7 @@ def test_unclear_switch_on_that_took_effect_keeps_going(session, keychain, monke
 
 
 def test_record_stays_until_the_phone_confirms(session, keychain, monkeypatch):
-    monkeypatch.setattr(pipeline, "helper", FakePhone(keychain, off_ok=False))
+    monkeypatch.setattr(pipeline, "helper", FakePhone(keychain, off_ok=False, status_encrypted=True))
     session._get_password()
     session._restore_encryption()
     assert recovery.has(UDID)  # still on: the restore card will offer to finish
@@ -116,13 +116,22 @@ def test_record_stays_until_the_phone_confirms(session, keychain, monkeypatch):
 
 
 def test_failed_restore_is_retried_at_the_end_of_the_check(session, keychain, monkeypatch):
-    monkeypatch.setattr(pipeline, "helper", FakePhone(keychain, off_ok=False))
+    monkeypatch.setattr(pipeline, "helper", FakePhone(keychain, off_ok=False, status_encrypted=True))
     session._get_password()
     session._restore_encryption()    # start of the analysis: the phone doesn't confirm
     assert session._temp_password
     monkeypatch.setattr(pipeline, "helper", FakePhone(keychain))
     session._restore_encryption()    # end of the check tries again
     assert not session._temp_password and not recovery.has(UDID)
+
+
+def test_switch_off_that_took_effect_despite_an_error_is_finished(session, keychain, monkeypatch):
+    """Seen on an iPhone 14 / iOS 27.0.1: the session ended with an error, but encryption was off."""
+    monkeypatch.setattr(pipeline, "helper", FakePhone(keychain, off_ok=False, status_encrypted=False))
+    session._get_password()
+    session._restore_encryption()
+    assert not session._temp_password and not recovery.has(UDID) and not keychain.items
+    assert any("reports it is off" in line for line in session.log)
 
 
 def test_restore_card_flow(session, keychain, monkeypatch):

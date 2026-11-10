@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.79 (2026-11-10)
+
+### Changed
+
+- pymobiledevice3 11.49.1 (from 11.19.4) and MVT 2026.11.2 (from 2026.9.28), verified with full checks on a
+  real iPhone (iOS 27.0.1). The device tools now need 12 fewer third-party packages.
+
+### Fixed
+
+- If switching the temporary backup encryption back off ends with an error even though the setting changed,
+  the check now asks the iPhone and completes the cleanup instead of leaving a reminder behind.
+
 ## 0.78 (2026-11-09)
 
 ### Security

@@ -6,4 +6,4 @@ uv==0.13.6
 pypi-attestations==0.0.30
 # scripts/brand_assets.py (logo outlines and font subsets); not needed to run or test the app
 fonttools[woff]==4.66.1
-uharfbuzz==0.56.2
+uharfbuzz==0.57.0

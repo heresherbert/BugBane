@@ -40,7 +40,7 @@ HELPER = ROOT / "app/helpers/device_helper.py"
 FILTERED_BACKUP = ROOT / "app/helpers/filtered_backup.py"
 DECRYPT = ROOT / "app/helpers/partial_decrypt.py"
 FETCH_IOCS = ROOT / "app/helpers/fetch_indicators.py"
-APP_VERSION = "0.78"
+APP_VERSION = "0.79"
 NOTICE_VERSION = "2026-09-23"
 
 GB = 1024 ** 3
@@ -686,14 +686,17 @@ class ScanSession:
         udid = self.device["udid"]
         answer = helper("encryption", "--udid", udid, "off", "--workdir", str(self.case_dir or RUN),
                         env={"BUGBANE_PW": self._password}, timeout=300)
-        if answer.get("ok") and answer.get("encrypted") is False:
-            self._temp_password = False
-            recovery.forget(udid)
-            with self.lock:
-                if self.device:
-                    self.device["backup_encrypted"] = False
-        else:
-            self._log(f"restore encryption: {answer.get('error') or 'still on'}")
+        if not (answer.get("ok") and answer.get("encrypted") is False):
+            self._log(f"restore encryption: {answer.get('error') or 'still on'} {answer.get('detail') or ''}".rstrip())
+            # The switch can succeed even when the session ends with an error: ask the phone what it says now.
+            if helper("status", "--udid", udid, timeout=60).get("backup_encrypted") is not False:
+                return  # still on: the Keychain record stays, and the restore card offers to finish the job
+            self._log("restore encryption: the iPhone reports it is off")
+        self._temp_password = False
+        recovery.forget(udid)
+        with self.lock:
+            if self.device:
+                self.device["backup_encrypted"] = False
 
     def _restore_pending(self):
         """Restore card: switch off the encryption an interrupted check left on, for the connected iPhone.

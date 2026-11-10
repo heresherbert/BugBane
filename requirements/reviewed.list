@@ -148,3 +148,7 @@ sigstore-models==0.0.6                   # 2026-10-03 owner approved (PR #10): d
 sigstore-rekor-types==0.0.18             # 2026-10-03 owner approved (PR #10): dev-only verifier deps, publishers checked
 tuf==7.0.1                               # 2026-10-03 owner approved (PR #10): dev-only verifier deps, publishers checked
 dnspython==2.9.1                         # 2026-11-09 owner approved: base64 decodes of DNS key/signature records (validate=True), no exec; dev-only
+ansilogs==1.1.0                          # 2026-11-10 owner approved: new: doronz88 (pymobiledevice3 maintainer), attested from doronz88/ansilogs; replaces coloredlogs/humanfriendly/pyreadline3
+bytestruct==0.2.0                        # 2026-11-10 owner approved: new: doronz88, attested from doronz88/bytestruct; stdlib-only binary codecs, no network/process
+ipsw-parser==1.9.0                       # 2026-11-10 owner approved: plumbum replaced by stdlib subprocess for the same ipsw/hdiutil calls
+pymobiledevice3==11.49.1                 # 2026-11-10 owner approved: new spawns/network only in restore, debugserver, tunnels, shell (unused by BugBane); verified on iPhone 14 / iOS 27.0.1
