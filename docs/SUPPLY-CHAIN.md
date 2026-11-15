@@ -25,9 +25,9 @@ pip install --require-hashes --only-binary :all: -r requirements/<env>.txt
 
 - `--require-hashes`: pip refuses any file whose SHA-256 isn't in the lock, and any package the lock doesn't
   name. A replaced file on PyPI or a mirror, or a dependency that appears out of nowhere, stops the install.
-- `--only-binary :all:`: wheels only, so no package runs its own code while being installed. The single
-  exception, `hexdump` 3.3 (no wheel exists), is allowed by the hash of one file that was read in full
-  (`requirements/vetting.toml`).
+- `--only-binary :all:`: wheels only, so no package runs its own code while being installed. Every locked
+  package currently ships a wheel. A package that doesn't could only be allowed by the hash of one source file
+  that was read in full (`[source_only]` in `requirements/vetting.toml`).
 - The app bundle removes `.pth` files (code that would run at every interpreter start) and loads packages via
   `PYTHONPATH`, which never reads them.
 
@@ -114,6 +114,13 @@ scripts/deps.py outdated          # newer releases of the explicit pins, past th
 scripts/deps.py bump              # write them into requirements/*.in
 scripts/deps.py lock              # regenerate the locks (add --upgrade to move transitive pins too)
 scripts/deps.py vet               # the gate, against origin/main
+```
+
+To fix a published vulnerability in a package that isn't an explicit pin, move only that package:
+
+```bash
+scripts/deps.py lock --upgrade-package <name>   # repeatable; nothing else in the tree changes
+scripts/deps.py vet
 ```
 
 pymobiledevice3 drives pairing and backups, so a change to it is also tested with a full check on a real iPhone

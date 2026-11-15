@@ -29,6 +29,12 @@ STANDARD_PREFIXES = (
     "/private/var/containers/Bundle/Application/", "/var/containers/Bundle/Application/",
     "/private/preboot/Cryptexes/", "/System/Cryptexes/",
 )
+# iOS keeps its software-update helper (UpdateBrain) here while an update is being prepared; only this one asset
+# folder is accepted, the rest of /private/var/MobileSoftwareUpdate/ is still reported.
+UPDATE_BRAIN_PREFIXES = (
+    "/private/var/MobileSoftwareUpdate/MobileAsset/AssetsV2/com_apple_MobileAsset_MobileSoftwareUpdate_UpdateBrain/",
+    "/var/MobileSoftwareUpdate/MobileAsset/AssetsV2/com_apple_MobileAsset_MobileSoftwareUpdate_UpdateBrain/",
+)
 # Where Pegasus and similar implants have historically lived
 IMPLANT_PREFIXES = ("/private/var/db/", "/private/var/tmp/", "/var/db/", "/var/tmp/", "/private/var/root/")
 BROWSING_MODULES = ("webkit", "safari", "firefox", "chrome", "browser", "history", "favicon")
@@ -52,6 +58,8 @@ HEAVY_NET_KINDS = {"alwayson", "filter", "dnsproxy", "url", "relay"}
 
 
 def is_standard(path):
+    if path.startswith(UPDATE_BRAIN_PREFIXES):
+        return ".." not in path.split("/")
     return path == "/kernel" or path.startswith(STANDARD_PREFIXES)
 
 

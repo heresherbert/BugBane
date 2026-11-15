@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.80 (2026-11-15)
+
+### Changed
+
+- pymobiledevice3 11.50.2 (from 11.49.1) with sslpsk-pmd3 1.2.2. Development tools updated: pytest 9.2.0,
+  uv 0.13.7, pypi-attestations 0.0.31 and fonttools 4.68.0.
+
+### Fixed
+
+- The running-programs check no longer reports iOS's own software-update helper (UpdateBrain) as running from an
+  unusual place while an update is being prepared. Only that one Apple folder is accepted.
+
 ## 0.79 (2026-11-10)
 
 ### Changed

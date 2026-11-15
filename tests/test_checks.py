@@ -205,3 +205,18 @@ def test_hungarian_dates_get_no_double_full_stop():
     where = checks.web_where("firefox_history", checks._visit_epoch(1780617600000))
     hu = i18n.t(where["t"], "hu", where["p"])
     assert ".." not in hu and "(2026. jún. 5.)" in hu
+
+
+UPDATE_BRAIN = ("/private/var/MobileSoftwareUpdate/MobileAsset/AssetsV2/"
+                "com_apple_MobileAsset_MobileSoftwareUpdate_UpdateBrain/0123abcd.asset/AssetData/")
+
+
+def test_update_brain_is_not_odd_but_the_rest_of_the_update_folder_is(tmp_path):
+    (tmp_path / "ps.txt").write_text("\n".join([
+        PS_HEADER, ps_line(1, UPDATE_BRAIN + "com.apple.MobileSoftwareUpdate.UpdateBrainService"),
+        ps_line(2, "/private/var/MobileSoftwareUpdate/Staging/helper"),
+        ps_line(3, UPDATE_BRAIN + "../../../../../tmp/helper")]))
+    r = checks.check_processes(tmp_path, index())
+    odd = [i["detail"] for i in r["items"] if i["key"] == "i.proc.odd"]
+    assert len(odd) == 2
+    assert not any("UpdateBrainService" in d for d in odd)
