@@ -155,3 +155,4 @@ pymobiledevice3==11.49.1                 # 2026-11-10 owner approved: new spawns
 fonttools==4.68.0                        # 2026-11-15 owner approved: eval of condition strings in font-table definitions (long-standing fontTools behaviour); dev-only
 pymobiledevice3==11.50.2                 # 2026-11-15 owner approved: flags are a docstring mention of exec and a Popen in the upstream docs-recording script, neither used by BugBane
 sslpsk-pmd3==1.2.2                       # 2026-11-15 owner approved: OpenSSL PSK binding for pairing; wheel ships its C source, the .so links only libSystem
+pymobiledevice3==11.57.0                 # 2026-11-24 owner approved: flag is git/hdiutil calls in misc/ddi_services.py, an upstream maintainer script nothing imports; no other new spawns or network calls in the diff

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.81 (2026-11-24)
+
+### Changed
+
+- pymobiledevice3 11.57.0 (from 11.50.2) with ansilogs 1.2.0. Development tool updated: uv 0.13.8.
+
 ## 0.80 (2026-11-15)
 
 ### Changed

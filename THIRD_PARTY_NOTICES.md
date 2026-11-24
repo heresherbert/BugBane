@@ -8,7 +8,7 @@ an embedded Python (next section), all pinned with hashes in `requirements/` (se
 
 | Component | Used for | How it's used | License |
 |---|---|---|---|
-| [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) 11.50.2 | USB pairing, backup, crash reports, sysdiagnose | imported in-process by `app/helpers/device_helper.py` and `app/helpers/filtered_backup.py` | GPL-3.0 |
+| [pymobiledevice3](https://github.com/doronz88/pymobiledevice3) 11.57.0 | USB pairing, backup, crash reports, sysdiagnose | imported in-process by `app/helpers/device_helper.py` and `app/helpers/filtered_backup.py` | GPL-3.0 |
 | [Mobile Verification Toolkit (MVT)](https://github.com/mvt-project/mvt) 2026.11.2 | backup analysis, indicator download | run as a **separate program** (`mvt`, `mvt-ios`) | MVT License 1.1 (MPL-2.0-based, adds a consent requirement) |
 | [iphone_backup_decrypt](https://github.com/jsharkey13/iphone_backup_decrypt) 0.10.0 (installed with MVT) | decrypting backup files | imported by `app/helpers/partial_decrypt.py` | MIT |
 
