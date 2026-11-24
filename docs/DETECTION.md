@@ -39,7 +39,7 @@ feeds, so the report says so instead of raising an alarm.
 | Jetsam | `JetsamEvent*.ips` | indicator process names over the past days |
 | shutdown.log | sysdiagnose `Extra/shutdown*.log` | indicator names or non-standard paths among processes that delayed a restart |
 | Crashes | `.ips` reports | WebKit `EXC_ARM_DA_ALIGN` and `mediaplaybackd` `CPU_RESOURCE` (DarkSword); ≥3 messaging/web/media crashes within an hour; crashes from implant paths |
-| Unified logs | `system_logs.logarchive` via `/usr/bin/log show --predicate` | published DarkSword/Coruna strings; indicator file paths under `/tmp` and `/private/var/tmp` |
+| Unified logs | `system_logs.logarchive` via `/usr/bin/log show --predicate` | published DarkSword/Coruna strings; indicator file paths under `/tmp` and `/private/var/tmp`; "nothing found" requires that the archive has readable entries |
 | MVT | database-only backup | all MVT backup modules |
 | Firefox | `places.db` from the backup | indicator domains (MVT only reads the legacy `browser.db`) |
 | iOS | `gdmf.apple.com` catalogue | newer iOS available for this model |

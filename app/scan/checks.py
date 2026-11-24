@@ -18,6 +18,7 @@ import re
 import sqlite3
 import subprocess
 import tempfile
+import threading
 from collections import Counter, defaultdict
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -40,6 +41,7 @@ IMPLANT_PREFIXES = ("/private/var/db/", "/private/var/tmp/", "/var/db/", "/var/t
 BROWSING_MODULES = ("webkit", "safari", "firefox", "chrome", "browser", "history", "favicon")
 MESSAGE_MODULES = ("sms", "whatsapp", "imessage", "message")
 # Published DarkSword / Coruna log markers (iVerify, GTIG, Lookout, Mar 2026)
+LOG_ENTRY = re.compile(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d")  # how a line of `log show` starts, unlike its header
 LOG_MARKERS = ("[DarkSword", "Running on non-A18", "/private/var/tmp/keychain-2.db",
                "/private/var/tmp/persona.kb", "/private/var/tmp/wifi_passwords.txt", "/private/var/tmp/icloud_dump")
 EXPLOIT_CRASH_SIGNS = (
@@ -435,22 +437,54 @@ def check_unified_logs(sysdiag_root, iocs, timeout=900):
     needles = list(LOG_MARKERS) + [p for p in iocs.file_paths
                                    if p.startswith(("/private/var/tmp/", "/tmp/")) and not p.endswith("/")]
     predicate = " OR ".join(f'eventMessage CONTAINS "{n.replace(chr(34), "")}"' for n in needles)
+    show = ["/usr/bin/log", "show", "--archive", str(archive), "--style", "compact"]
+    out, problem = "", None
     try:
-        out = subprocess.run(["/usr/bin/log", "show", "--archive", str(archive), "--style", "compact",
-                              "--predicate", predicate], capture_output=True, text=True, timeout=timeout).stdout
-    except subprocess.TimeoutExpired:
-        return skipped("logs", "chk.logs.timeout")
+        proc = subprocess.run([*show, "--predicate", predicate], capture_output=True, text=True,
+                              errors="replace", timeout=timeout)
+        out = proc.stdout
+        if proc.returncode != 0:
+            problem = "chk.logs.fail"
+    except subprocess.TimeoutExpired as e:
+        out, problem = e.stdout or "", "chk.logs.timeout"
+        if isinstance(out, bytes):  # what was read before a timeout isn't decoded, even with text=True
+            out = out.decode(errors="replace")
+    except OSError:
+        problem = "chk.logs.fail"
+    # Matches found before a failure still count; "nothing found" only counts if the log could be read.
     items = [item("alert", "i.log.hit", {}, line[:300]) for line in out.splitlines()[1:]
              if any(n in line for n in needles)]
-    if not items:
-        return result("logs", [], "chk.logs.ok")
-    return result("logs", items, "chk.logs.hits", {"n": len(items)})
+    if items:
+        return result("logs", items, "chk.logs.hits", {"n": len(items)})
+    if not problem and not _log_has_entries(show):
+        problem = "chk.logs.fail"
+    if problem:
+        return skipped("logs", problem)
+    return result("logs", [], "chk.logs.ok")
+
+
+def _log_has_entries(show, timeout=120):
+    """Whether an unfiltered `log show` gives at least one entry. It exits normally with only its header line
+    when the archive's trace files are missing or unreadable, which looks the same as a search with no match."""
+    try:
+        proc = subprocess.Popen(show, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, errors="replace")
+    except OSError:
+        return False
+    stop = threading.Timer(timeout, proc.kill)
+    stop.start()
+    try:
+        return any(LOG_ENTRY.match(line) for line in proc.stdout)
+    finally:
+        stop.cancel()
+        proc.kill()
+        proc.stdout.close()
+        proc.wait()
 
 
 # --- 9. MVT backup results ---------------------------------------------------
 
-def check_mvt_results(mvt_out, iocs, installed_ids):
-    if not mvt_out or not Path(mvt_out).exists():
+def check_mvt_results(mvt_out, iocs, installed_ids, exit_code=0):
+    if not mvt_out:
         return skipped("mvt", "chk.mvt.skip")
     from .iocs import Indicator
     items = []
@@ -476,6 +510,9 @@ def check_mvt_results(mvt_out, iocs, installed_ids):
             data = _load_json(f)
             if isinstance(data, list):
                 counts[name[:-5]] = len(data)
+    # Matches always count; "nothing found" only counts if MVT finished and read something.
+    if not items and (exit_code != 0 or not sum(counts.values())):
+        return skipped("mvt", "chk.mvt.fail")
     return result("mvt", items, "chk.mvt.sum", {
         "total": sum(counts.values()), "sms": counts.get("sms", 0),
         "web": counts.get("webkit_resource_load_statistics", 0), "usage": counts.get("datausage", 0)})

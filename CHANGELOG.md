@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.82 (2026-11-24)
+
+### Fixed
+
+- The system log search no longer reports "No attack-kit messages found" when the iPhone's log couldn't be read.
+  It now says that the log couldn't be read, and the result counts as partly checked. Matches found before a
+  search failed or timed out are kept.
+- The backup check by MVT is no longer reported as clean when MVT stopped with an error or read no records.
+
 ## 0.81 (2026-11-24)
 
 ### Changed

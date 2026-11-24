@@ -1,8 +1,10 @@
 """Check logic on hand-made fixtures (no real phone data)."""
 import json
 import plistlib
+import subprocess
 from plistlib import UID
 
+import pytest
 from replay import write_ne
 from scan import checks
 from scan.iocs import IOCIndex, Indicator
@@ -220,3 +222,74 @@ def test_update_brain_is_not_odd_but_the_rest_of_the_update_folder_is(tmp_path):
     odd = [i["detail"] for i in r["items"] if i["key"] == "i.proc.odd"]
     assert len(odd) == 2
     assert not any("UpdateBrainService" in d for d in odd)
+
+
+LOG_HEADER = "Timestamp               Ty Process[PID:TID]\n"
+LOG_LINE = "2026-09-20 04:10:00.000 Df kernel[0:1] an ordinary entry\n"
+LOG_HIT = "2026-09-20 04:10:00.000 Df kernel[0:1] [DarkSword stage 1\n"
+
+
+def unified_logs(tmp_path, monkeypatch, search, readable="", returncode=0):
+    """check_unified_logs with `log show` replaced: `search` is the filtered output (or an exception to raise),
+    `readable` the unfiltered output of the follow-up that proves the archive has entries."""
+    (tmp_path / "system_logs.logarchive").mkdir()
+
+    def run(cmd, **kwargs):
+        if isinstance(search, Exception):
+            raise search
+        return subprocess.CompletedProcess(cmd, returncode, search, "")
+
+    real_popen = subprocess.Popen
+    monkeypatch.setattr(checks.subprocess, "run", run)
+    monkeypatch.setattr(checks.subprocess, "Popen",
+                        lambda cmd, **kw: real_popen(["/usr/bin/printf", "%s", readable], **kw))
+    r = checks.check_unified_logs(tmp_path, index())
+    return r["status"], r["summary"]["key"]
+
+
+CLEAN, FAILED, HIT = ("ok", "chk.logs.ok"), ("skipped", "chk.logs.fail"), ("alert", "chk.logs.hits")
+
+
+@pytest.mark.parametrize("search, readable, returncode, expected", [
+    (LOG_HEADER, LOG_HEADER + LOG_LINE, 0, CLEAN),
+    # Apple's `log` exits with 65 when it can't open the archive
+    ("", "", 65, FAILED),
+    (LOG_HEADER, LOG_HEADER + LOG_LINE, 65, FAILED),
+    # it exits with 0 and prints only its header when the archive has no readable entries
+    (LOG_HEADER, LOG_HEADER, 0, FAILED),
+    ("", "", 0, FAILED),
+    # a match always counts
+    (LOG_HEADER + LOG_HIT, "", 0, HIT),
+    (LOG_HEADER + LOG_HIT, "", 65, HIT),
+    (subprocess.TimeoutExpired("log", 1), "", 0, ("skipped", "chk.logs.timeout")),
+    (subprocess.TimeoutExpired("log", 1, output=(LOG_HEADER + LOG_HIT).encode()), "", 0, HIT),
+    (FileNotFoundError(), "", 0, FAILED),
+])
+def test_unified_logs_only_clean_when_readable(tmp_path, monkeypatch, search, readable, returncode, expected):
+    assert unified_logs(tmp_path, monkeypatch, search, readable, returncode) == expected
+
+
+def test_unreadable_log_makes_the_result_partial():
+    missed, fix = checks.partial([checks.skipped("logs", "chk.logs.fail")], "full")
+    assert missed == ["logs"] and fix == "v.partial.fix.other"
+
+
+@pytest.mark.parametrize("files, exit_code, status, key", [
+    ({"sms.json": [{}, {}]}, 0, "ok", "chk.mvt.sum"),
+    ({"sms.json": [{}, {}]}, 1, "skipped", "chk.mvt.fail"),
+    ({"sms.json": [{}, {}]}, -1, "skipped", "chk.mvt.fail"),
+    ({"sms.json": []}, 0, "skipped", "chk.mvt.fail"),
+    ({}, 0, "skipped", "chk.mvt.fail"),
+    ({"sms_detected.json": [{"matched_indicator": {"value": "bh", "type": "processes", "name": "Pegasus"}}]}, 1,
+     "alert", "chk.mvt.sum"),
+])
+def test_mvt_only_clean_when_it_finished_and_read_records(tmp_path, files, exit_code, status, key):
+    for name, data in files.items():
+        (tmp_path / name).write_text(json.dumps(data))
+    r = checks.check_mvt_results(tmp_path, index(), set(), exit_code)
+    assert (r["status"], r["summary"]["key"]) == (status, key)
+
+
+def test_mvt_without_a_backup_or_without_output(tmp_path):
+    assert checks.check_mvt_results(None, index(), set())["summary"]["key"] == "chk.mvt.skip"
+    assert checks.check_mvt_results(tmp_path / "missing", index(), set(), 1)["summary"]["key"] == "chk.mvt.fail"

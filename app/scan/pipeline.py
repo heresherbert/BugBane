@@ -40,7 +40,7 @@ HELPER = ROOT / "app/helpers/device_helper.py"
 FILTERED_BACKUP = ROOT / "app/helpers/filtered_backup.py"
 DECRYPT = ROOT / "app/helpers/partial_decrypt.py"
 FETCH_IOCS = ROOT / "app/helpers/fetch_indicators.py"
-APP_VERSION = "0.81"
+APP_VERSION = "0.82"
 NOTICE_VERSION = "2026-09-23"
 
 GB = 1024 ** 3
@@ -759,10 +759,10 @@ class ScanSession:
 
         def run_mvt():
             if not backup_dec:
-                return None
-            self._run_cmd([MVT_IOS, "--disable-update-check", "--disable-indicator-update-check",
-                           "check-backup", "-o", mvt_out, backup_dec], timeout=3600)
-            return mvt_out
+                return None, 0
+            code, _ = self._run_cmd([MVT_IOS, "--disable-update-check", "--disable-indicator-update-check",
+                                     "check-backup", "-o", mvt_out, backup_dec], timeout=3600)
+            return mvt_out, code
 
         self._step("analyze", detail="d.analyze.list", progress=5)
         with ThreadPoolExecutor(max_workers=3) as pool:
@@ -779,7 +779,8 @@ class ScanSession:
                 checks.check_crashes(crash_dirs, index),
             ]
             self._step("analyze", detail="d.analyze.mvt", progress=35)
-            results.append(checks.check_mvt_results(mvt_future.result(), index, installed))
+            mvt_dir, mvt_code = mvt_future.result()
+            results.append(checks.check_mvt_results(mvt_dir, index, installed, mvt_code))
             results.append(checks.check_browser_history(backup_dec, index, installed))
             self._step("analyze", detail="d.analyze.logs", progress=70)
             results.append(logs_future.result())

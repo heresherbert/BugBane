@@ -208,7 +208,7 @@ def replay_logs(index, outcomes):
     def fake_log_show(cmd, **kwargs):
         seen["predicate"] = cmd[cmd.index("--predicate") + 1]
         lines = ["Filtering the log data using predicate"] + [f"2026-09-20 04:10:00 kernel: touched {p}" for p in tmp_paths]
-        return mock.Mock(stdout="\n".join(lines))
+        return mock.Mock(stdout="\n".join(lines), returncode=0)
 
     with tempfile.TemporaryDirectory() as tmp:
         Path(tmp, "system_logs.logarchive").mkdir()
